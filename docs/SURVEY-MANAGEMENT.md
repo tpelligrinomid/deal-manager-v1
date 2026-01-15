@@ -273,15 +273,47 @@ This question only appears if `has_employees` is answered `true`.
 
 ---
 
+## Per-User Surveys
+
+Each seller invited to a deal gets their own complete survey to fill out. This allows multiple founders/owners to provide their individual perspectives.
+
+### How It Works
+- When a seller is invited to a deal, they get access to fill out their own survey
+- Each seller's responses are stored separately (keyed by `deal_id + user_id`)
+- Advisors can view surveys but cannot fill them out
+- Team members can view all sellers' responses and compare them
+
+### Access Levels
+
+| Access Level | View Deal | View Surveys | Fill Out Survey |
+|--------------|-----------|--------------|-----------------|
+| `seller`     | Yes       | Own only     | Yes             |
+| `advisor`    | Yes       | All (read-only) | No           |
+
+### Inviting Users
+
+```javascript
+// Invite a seller (can fill out survey)
+POST /api/deals/:dealId/invite
+{ "email": "founder@agency.com", "full_name": "John Smith", "access_level": "seller" }
+
+// Invite an advisor (view-only)
+POST /api/deals/:dealId/invite
+{ "email": "advisor@firm.com", "full_name": "Jane Advisor", "access_level": "advisor" }
+```
+
+---
+
 ## Database Schema
 
 ### survey_responses
-Stores individual answers:
+Stores individual answers per user:
 ```
 | Column       | Type      | Description                    |
 |--------------|-----------|--------------------------------|
 | id           | UUID      | Primary key                    |
 | deal_id      | UUID      | Reference to deals table       |
+| user_id      | UUID      | User who owns this response    |
 | section_id   | TEXT      | Matches section.id in config   |
 | question_id  | TEXT      | Matches question.id in config  |
 | answer       | JSONB     | The response value             |
@@ -291,12 +323,16 @@ Stores individual answers:
 | flagged      | BOOLEAN   | Team can flag for review       |
 ```
 
+**Unique constraint:** `(deal_id, user_id, section_id, question_id)`
+
 ### survey_progress
-Tracks completion per deal:
+Tracks completion per user per deal:
 ```
 | Column               | Type      | Description              |
 |----------------------|-----------|--------------------------|
-| deal_id              | UUID      | Primary key              |
+| id                   | UUID      | Primary key              |
+| deal_id              | UUID      | Reference to deals       |
+| user_id              | UUID      | User being tracked       |
 | total_questions      | INTEGER   | Count of required Qs     |
 | answered_questions   | INTEGER   | Count answered           |
 | completion_percentage| INTEGER   | 0-100                    |
@@ -305,6 +341,8 @@ Tracks completion per deal:
 | last_saved_at        | TIMESTAMP | Most recent save         |
 ```
 
+**Unique constraint:** `(deal_id, user_id)`
+
 ---
 
 ## API Endpoints
@@ -312,10 +350,61 @@ Tracks completion per deal:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/survey/config` | Get survey structure (sections & questions) |
-| GET | `/api/survey/:dealId` | Get responses and progress for a deal |
-| POST | `/api/survey/:dealId/responses` | Batch save responses |
+| GET | `/api/survey/:dealId` | Get responses (sellers: own only, team: all users or ?user_id=) |
+| GET | `/api/survey/:dealId/respondents` | List all sellers and their progress (team only) |
+| GET | `/api/survey/:dealId/compare` | Compare responses across all sellers (team only) |
+| POST | `/api/survey/:dealId/responses` | Batch save responses (sellers only) |
 | PATCH | `/api/survey/:dealId/response/:sectionId/:questionId` | Update single response |
 | GET | `/api/survey/:dealId/flagged` | Get flagged responses (team only) |
+
+### Response Formats
+
+**GET /api/survey/:dealId (for sellers)**
+```json
+{
+  "responses": {
+    "section_id": {
+      "question_id": { "answer": "...", "answered_at": "..." }
+    }
+  },
+  "progress": {
+    "total_questions": 85,
+    "answered_questions": 42,
+    "completion_percentage": 49
+  }
+}
+```
+
+**GET /api/survey/:dealId (for team, no user_id filter)**
+```json
+{
+  "responses_by_user": {
+    "user-uuid-1": { "section_id": { "question_id": {...} } },
+    "user-uuid-2": { "section_id": { "question_id": {...} } }
+  },
+  "progress_by_user": {
+    "user-uuid-1": { "completion_percentage": 100 },
+    "user-uuid-2": { "completion_percentage": 45 }
+  }
+}
+```
+
+**GET /api/survey/:dealId/respondents (team only)**
+```json
+{
+  "respondents": [
+    {
+      "user_id": "...",
+      "email": "founder@agency.com",
+      "full_name": "John Founder",
+      "is_primary_contact": true,
+      "completion_percentage": 100,
+      "started_at": "...",
+      "completed_at": "..."
+    }
+  ]
+}
+```
 
 ---
 

@@ -253,17 +253,26 @@ router.delete('/:dealId', requireRole('admin'), async (req, res) => {
 });
 
 /**
- * POST /api/deals/:dealId/invite-seller
- * Invite a seller to access the deal portal
- * Uses authorized_emails table - seller signs up and gets access automatically
+ * POST /api/deals/:dealId/invite
+ * Invite a user to access the deal portal
+ * Supports different access levels:
+ *   - 'seller': Can fill out survey, upload documents
+ *   - 'advisor': View-only access to deal, surveys, documents (cannot fill out survey)
+ * Uses authorized_emails table - user signs up and gets access automatically
  */
-router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), async (req, res) => {
+router.post('/:dealId/invite', requireRole(['admin', 'team_member']), async (req, res) => {
   try {
     const { dealId } = req.params;
-    const { email, full_name } = req.body;
+    const { email, full_name, access_level = 'seller' } = req.body;
 
     if (!email) {
       return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Validate access level
+    const validAccessLevels = ['seller', 'advisor'];
+    if (!validAccessLevels.includes(access_level)) {
+      return res.status(400).json({ error: 'Invalid access level. Must be "seller" or "advisor"' });
     }
 
     const normalizedEmail = email.toLowerCase();
@@ -291,7 +300,7 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
         .upsert({
           deal_id: dealId,
           user_id: existingUser.id,
-          access_level: 'seller',
+          access_level: access_level,
           granted_by: req.user.id
         });
 
@@ -299,7 +308,7 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
 
       isNewInvite = true; // Still send email to notify them
     } else {
-      // User doesn't exist - add to authorized_emails so they get seller role on signup
+      // User doesn't exist - add to authorized_emails so they get role on signup
       // First check if already invited
       const { data: existingInvite } = await req.supabase
         .from('authorized_emails')
@@ -321,6 +330,112 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
 
       if (!existingInvite) {
         // Add to authorized_emails with deal_id for auto-access on signup
+        // Note: advisors get 'advisor' role, sellers get 'seller' role
+        const { error: inviteError } = await req.supabase
+          .from('authorized_emails')
+          .insert({
+            email: normalizedEmail,
+            full_name: full_name || null,
+            role: access_level, // 'seller' or 'advisor'
+            invited_by: req.user.id,
+            deal_id: dealId,
+            access_level: access_level // Store access level for deal_access creation on signup
+          });
+
+        if (inviteError) throw inviteError;
+        isNewInvite = true;
+      }
+    }
+
+    // Send invite email via n8n webhook (non-blocking)
+    if (isNewInvite && process.env.N8N_WEBHOOK_URL) {
+      fetch(process.env.N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: access_level === 'advisor' ? 'advisor_invite' : 'seller_invite',
+          to: normalizedEmail,
+          name: full_name || normalizedEmail.split('@')[0],
+          dealName: deal?.agency_name || 'your deal',
+          invitedBy: req.user.full_name || req.user.email,
+          signupUrl: process.env.FRONTEND_URL || 'https://aragon-deal-space.lovable.app',
+          isExistingUser: !!existingUser,
+          accessLevel: access_level
+        })
+      }).catch(err => console.error('Failed to send invite email webhook:', err));
+    }
+
+    const roleLabel = access_level === 'advisor' ? 'an advisor' : 'a seller';
+    res.json({
+      success: true,
+      message: existingUser
+        ? `${email} has been granted ${access_level} access to this deal.`
+        : `${email} has been authorized as ${roleLabel}. They will receive access when they sign up.`,
+      existingUser: !!existingUser,
+      access_level
+    });
+  } catch (error) {
+    console.error('Error inviting user:', error);
+    res.status(500).json({ error: 'Failed to invite user' });
+  }
+});
+
+// Legacy endpoint - redirects to /invite with access_level: 'seller'
+// Frontend should migrate to using POST /api/deals/:dealId/invite
+router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), async (req, res) => {
+  req.body.access_level = 'seller';
+  // Import the invite logic inline to avoid duplication
+  const { dealId } = req.params;
+  const { email, full_name, access_level = 'seller' } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const normalizedEmail = email.toLowerCase();
+
+  try {
+    const { data: deal } = await req.supabase
+      .from('deals')
+      .select('agency_name')
+      .eq('id', dealId)
+      .single();
+
+    const { data: existingUser } = await req.supabase
+      .from('profiles')
+      .select('id, role')
+      .eq('email', normalizedEmail)
+      .single();
+
+    let isNewInvite = false;
+
+    if (existingUser) {
+      const { error: accessError } = await req.supabase
+        .from('deal_access')
+        .upsert({
+          deal_id: dealId,
+          user_id: existingUser.id,
+          access_level: 'seller',
+          granted_by: req.user.id
+        });
+      if (accessError) throw accessError;
+      isNewInvite = true;
+    } else {
+      const { data: existingInvite } = await req.supabase
+        .from('authorized_emails')
+        .select('id, claimed_at')
+        .eq('email', normalizedEmail)
+        .single();
+
+      if (existingInvite && !existingInvite.claimed_at) {
+        if (req.body.resend) {
+          isNewInvite = true;
+        } else {
+          return res.status(409).json({ error: 'User already has a pending invitation', canResend: true });
+        }
+      }
+
+      if (!existingInvite) {
         const { error: inviteError } = await req.supabase
           .from('authorized_emails')
           .insert({
@@ -330,13 +445,11 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
             invited_by: req.user.id,
             deal_id: dealId
           });
-
         if (inviteError) throw inviteError;
         isNewInvite = true;
       }
     }
 
-    // Send invite email via n8n webhook (non-blocking)
     if (isNewInvite && process.env.N8N_WEBHOOK_URL) {
       fetch(process.env.N8N_WEBHOOK_URL, {
         method: 'POST',
