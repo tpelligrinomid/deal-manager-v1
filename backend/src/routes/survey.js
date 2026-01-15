@@ -6,6 +6,20 @@ const { authenticate, requireRole, requireDealAccess } = require('../middleware/
 router.use(authenticate);
 
 /**
+ * GET /api/survey/config
+ * Get the survey configuration (questions, sections, etc.)
+ */
+router.get('/config', async (req, res) => {
+  try {
+    const surveyConfig = require('../../../config/survey.json');
+    res.json(surveyConfig);
+  } catch (error) {
+    console.error('Error loading survey config:', error);
+    res.status(500).json({ error: 'Failed to load survey configuration' });
+  }
+});
+
+/**
  * GET /api/survey/:dealId
  * Get all survey responses for a deal
  */
