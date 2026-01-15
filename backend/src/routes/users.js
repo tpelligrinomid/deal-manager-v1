@@ -219,14 +219,26 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
 /**
  * GET /api/users/invites
  * List all pending invitations (admin only)
+ * Query params:
+ *   - type: 'team' (admin, team_member, advisor) or 'seller' or 'all' (default)
  */
 router.get('/invites', requireRole('admin'), async (req, res) => {
   try {
-    const { data: invites, error } = await req.supabase
+    const { type = 'all' } = req.query;
+
+    let query = req.supabase
       .from('authorized_emails')
       .select('*')
       .is('claimed_at', null)
       .order('invited_at', { ascending: false });
+
+    if (type === 'team') {
+      query = query.in('role', ['admin', 'team_member', 'advisor']);
+    } else if (type === 'seller') {
+      query = query.eq('role', 'seller');
+    }
+
+    const { data: invites, error } = await query;
 
     if (error) throw error;
 
