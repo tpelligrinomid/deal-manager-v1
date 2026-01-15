@@ -43,6 +43,15 @@ const authenticate = async (req, res, next) => {
     // Create a Supabase client with the user's token for RLS queries
     req.supabase = createSupabaseClient(token);
 
+    // Check if user is pending (not yet authorized)
+    if (profile.role === 'pending') {
+      return res.status(403).json({
+        error: 'Account pending authorization',
+        code: 'PENDING_AUTHORIZATION',
+        message: 'Your account is awaiting authorization. Please contact an administrator.'
+      });
+    }
+
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);

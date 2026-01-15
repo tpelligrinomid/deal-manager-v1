@@ -147,7 +147,93 @@ router.patch('/:userId', requireRole('admin'), async (req, res) => {
 });
 
 /**
- * GET /api/users/team
+ * POST /api/users/invite
+ * Pre-authorize a user by creating their profile before they sign up (admin only)
+ * This adds them to the "allowlist" so when they sign up, they get access
+ */
+router.post('/invite', requireRole('admin'), async (req, res) => {
+  try {
+    const { email, full_name, role = 'team_member', company_name } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    // Validate role
+    const validRoles = ['admin', 'team_member', 'seller', 'advisor'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    // Check if profile already exists
+    const { data: existing } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existing) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
+
+    // Create profile without an auth ID (will be linked when they sign up)
+    // Generate a temporary UUID that will be replaced when they actually sign up
+    const tempId = require('crypto').randomUUID();
+
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      .insert({
+        id: tempId,
+        email: email.toLowerCase(),
+        full_name: full_name || email.split('@')[0],
+        role,
+        company_name
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json({
+      success: true,
+      message: `User ${email} has been pre-authorized as ${role}. They can now sign up.`,
+      profile
+    });
+  } catch (error) {
+    console.error('Error inviting user:', error);
+    res.status(500).json({ error: 'Failed to invite user' });
+  }
+});
+
+/**
+ * DELETE /api/users/:userId
+ * Remove a user (admin only)
+ */
+router.delete('/:userId', requireRole('admin'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // Don't allow deleting yourself
+    if (userId === req.user.id) {
+      return res.status(400).json({ error: 'Cannot delete your own account' });
+    }
+
+    const { error } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
+/**
+ * GET /api/users/team/members
  * Get team members only (for assignment dropdowns, etc.)
  */
 router.get('/team/members', requireRole(['admin', 'team_member']), async (req, res) => {
