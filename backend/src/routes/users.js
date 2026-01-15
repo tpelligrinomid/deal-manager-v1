@@ -148,8 +148,8 @@ router.patch('/:userId', requireRole('admin'), async (req, res) => {
 
 /**
  * POST /api/users/invite
- * Pre-authorize a user by creating their profile before they sign up (admin only)
- * This adds them to the "allowlist" so when they sign up, they get access
+ * Pre-authorize a user by adding them to the allowlist (admin only)
+ * When they sign up, they'll automatically get the assigned role
  */
 router.post('/invite', requireRole('admin'), async (req, res) => {
   try {
@@ -165,29 +165,40 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
-    // Check if profile already exists
-    const { data: existing } = await supabaseAdmin
+    // Check if already on allowlist
+    const { data: existingInvite } = await supabaseAdmin
+      .from('authorized_emails')
+      .select('id, email, claimed_at')
+      .eq('email', email.toLowerCase())
+      .single();
+
+    if (existingInvite) {
+      if (existingInvite.claimed_at) {
+        return res.status(409).json({ error: 'User has already signed up' });
+      }
+      return res.status(409).json({ error: 'User already invited' });
+    }
+
+    // Check if they already have a profile (signed up before invite system)
+    const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id, email')
       .eq('email', email.toLowerCase())
       .single();
 
-    if (existing) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+    if (existingProfile) {
+      return res.status(409).json({ error: 'User already has an account' });
     }
 
-    // Create profile without an auth ID (will be linked when they sign up)
-    // Generate a temporary UUID that will be replaced when they actually sign up
-    const tempId = require('crypto').randomUUID();
-
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
+    // Add to allowlist
+    const { data: invite, error } = await supabaseAdmin
+      .from('authorized_emails')
       .insert({
-        id: tempId,
         email: email.toLowerCase(),
-        full_name: full_name || email.split('@')[0],
+        full_name: full_name || null,
         role,
-        company_name
+        company_name: company_name || null,
+        invited_by: req.user.id
       })
       .select()
       .single();
@@ -196,12 +207,56 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `User ${email} has been pre-authorized as ${role}. They can now sign up.`,
-      profile
+      message: `${email} has been authorized as ${role}. They can now sign up.`,
+      invite
     });
   } catch (error) {
     console.error('Error inviting user:', error);
     res.status(500).json({ error: 'Failed to invite user' });
+  }
+});
+
+/**
+ * GET /api/users/invites
+ * List all pending invitations (admin only)
+ */
+router.get('/invites', requireRole('admin'), async (req, res) => {
+  try {
+    const { data: invites, error } = await supabaseAdmin
+      .from('authorized_emails')
+      .select('*')
+      .is('claimed_at', null)
+      .order('invited_at', { ascending: false });
+
+    if (error) throw error;
+
+    res.json(invites);
+  } catch (error) {
+    console.error('Error fetching invites:', error);
+    res.status(500).json({ error: 'Failed to fetch invites' });
+  }
+});
+
+/**
+ * DELETE /api/users/invites/:inviteId
+ * Revoke a pending invitation (admin only)
+ */
+router.delete('/invites/:inviteId', requireRole('admin'), async (req, res) => {
+  try {
+    const { inviteId } = req.params;
+
+    const { error } = await supabaseAdmin
+      .from('authorized_emails')
+      .delete()
+      .eq('id', inviteId)
+      .is('claimed_at', null); // Only delete if not claimed
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error revoking invite:', error);
+    res.status(500).json({ error: 'Failed to revoke invite' });
   }
 });
 
