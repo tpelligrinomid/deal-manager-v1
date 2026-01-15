@@ -320,14 +320,15 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
       }
 
       if (!existingInvite) {
-        // Add to authorized_emails
+        // Add to authorized_emails with deal_id for auto-access on signup
         const { error: inviteError } = await req.supabase
           .from('authorized_emails')
           .insert({
             email: normalizedEmail,
             full_name: full_name || null,
             role: 'seller',
-            invited_by: req.user.id
+            invited_by: req.user.id,
+            deal_id: dealId
           });
 
         if (inviteError) throw inviteError;
@@ -421,6 +422,76 @@ router.get('/:dealId/notes', requireRole(['admin', 'team_member']), async (req, 
   } catch (error) {
     console.error('Error fetching notes:', error);
     res.status(500).json({ error: 'Failed to fetch notes' });
+  }
+});
+
+/**
+ * GET /api/deals/:dealId/sellers
+ * Get all sellers (and pending invites) for a deal
+ */
+router.get('/:dealId/sellers', requireRole(['admin', 'team_member']), async (req, res) => {
+  try {
+    const { dealId } = req.params;
+
+    // Get active sellers with deal access
+    const { data: activeSellers, error: sellersError } = await req.supabase
+      .from('deal_access')
+      .select(`
+        user_id,
+        access_level,
+        granted_at,
+        profiles:user_id (id, email, full_name, role)
+      `)
+      .eq('deal_id', dealId)
+      .eq('access_level', 'seller');
+
+    if (sellersError) throw sellersError;
+
+    // Get pending seller invites for this deal
+    const { data: pendingInvites, error: invitesError } = await req.supabase
+      .from('authorized_emails')
+      .select('*')
+      .eq('deal_id', dealId)
+      .eq('role', 'seller')
+      .is('claimed_at', null);
+
+    if (invitesError) throw invitesError;
+
+    res.json({
+      active: activeSellers?.map(s => ({
+        id: s.profiles?.id,
+        email: s.profiles?.email,
+        full_name: s.profiles?.full_name,
+        granted_at: s.granted_at
+      })) || [],
+      pending: pendingInvites || []
+    });
+  } catch (error) {
+    console.error('Error fetching sellers:', error);
+    res.status(500).json({ error: 'Failed to fetch sellers' });
+  }
+});
+
+/**
+ * DELETE /api/deals/:dealId/sellers/:odId
+ * Revoke a seller's access to a deal
+ */
+router.delete('/:dealId/sellers/:userId', requireRole(['admin', 'team_member']), async (req, res) => {
+  try {
+    const { dealId, userId } = req.params;
+
+    const { error } = await req.supabase
+      .from('deal_access')
+      .delete()
+      .eq('deal_id', dealId)
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error removing seller:', error);
+    res.status(500).json({ error: 'Failed to remove seller' });
   }
 });
 
