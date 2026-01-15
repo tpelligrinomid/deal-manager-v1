@@ -1,0 +1,157 @@
+I'll pull together a comprehensive style guide from your design system files.
+
+Here's your **Aragon Holdings Design System** style guide:
+
+---
+
+## 🎨 **Thoughtful™ Style Guide**
+*For sister applications in the Aragon Holdings family*
+
+---
+
+### **Typography**
+
+| Role | Font Family | Weights | Usage |
+|------|-------------|---------|-------|
+| **Headings** | Playfair Display | 400, 500, 600, 700 (+ italic) | H1-H6, hero text, display |
+| **Body** | Inter | 300, 400, 500, 600, 700 | All body text, buttons, labels |
+
+**Google Fonts embed:**
+```html
+
+```
+
+**Heading sizes:**
+- H1: `text-4xl md:text-5xl`
+- H2: `text-3xl md:text-4xl`
+- H3: `text-2xl md:text-3xl`
+- H4: `text-xl md:text-2xl`
+
+---
+
+### **Color Palette**
+
+#### **Brand Colors**
+| Token | Hex | HSL | Usage |
+|-------|-----|-----|-------|
+| **Primary (Green)** | `#58B50B` | `89 91% 38%` | CTAs, links, active states |
+| **Accent (Orange)** | `#ED8C34` | `28 84% 57%` | Highlights, badges, secondary actions |
+
+#### **Backgrounds**
+| Token | Hex | HSL | Usage |
+|-------|-----|-----|-------|
+| **Background** | `#EEEEEE` | `0 0% 93%` | Page background |
+| **Hero / Light** | `#FAFAFA` | `0 0% 98%` | Hero sections, sidebar |
+| **Card** | `#FFFFFF` | `0 0% 100%` | Cards, modals, inputs |
+
+#### **Text**
+| Token | Hex | HSL | Usage |
+|-------|-----|-----|-------|
+| **Foreground** | `#171717` | `0 0% 9%` | Primary text |
+| **Muted** | `#666666` | `0 0% 40%` | Secondary text, placeholders |
+
+#### **Semantic Colors**
+| Token | HSL | Usage |
+|-------|-----|-------|
+| **Success** | `142 70% 40%` | Confirmations, positive states |
+| **Warning** | `38 92% 50%` | Caution states |
+| **Destructive** | `0 65% 50%` | Errors, delete actions |
+
+#### **Utility Colors**
+| Token | HSL | Usage |
+|-------|-----|-------|
+| **Border** | `0 0% 85%` | Card borders, dividers |
+| **Secondary** | `0 0% 91%` | Subtle backgrounds, hover states |
+
+---
+
+### **Dark Mode**
+The system supports dark mode with inverted neutrals but preserved brand colors:
+- Background → `0 0% 9%` (near black)
+- Card → `0 0% 14%`
+- Primary green brightens to `89 85% 45%`
+
+---
+
+### **Border Radius**
+| Token | Value |
+|-------|-------|
+| `--radius` | `0.5rem` (8px) |
+| `radius-lg` | `0.5rem` |
+| `radius-md` | `calc(0.5rem - 2px)` |
+| `radius-sm` | `calc(0.5rem - 4px)` |
+
+---
+
+### **Shadows**
+```css
+/* Subtle card shadow */
+.card-shadow {
+  box-shadow: 0 2px 8px -2px hsl(0 0% 9% / 0.06), 
+              0 4px 16px -4px hsl(0 0% 9% / 0.08);
+}
+
+/* Elevated card shadow (hover states) */
+.card-shadow-elevated {
+  box-shadow: 0 4px 12px -2px hsl(0 0% 9% / 0.08), 
+              0 8px 24px -4px hsl(0 0% 9% / 0.12);
+}
+```
+
+---
+
+### **Interaction Patterns**
+
+**Button hover lift:**
+```css
+.btn-hover-lift {
+  transition: all 200ms;
+}
+.btn-hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+}
+```
+
+---
+
+### **Component Styling**
+
+| Element | Style Notes |
+|---------|-------------|
+| **Buttons** | Rounded corners, primary green fill, white text, lift on hover |
+| **Cards** | White background, subtle shadow, 0.5rem radius, 1px border on hover |
+| **Inputs** | White background, gray border, green focus ring |
+| **Badges** | Small, pill-shaped, muted backgrounds or colored for status |
+| **Sidebar** | Off-white (`#FAFAFA`), green active indicator |
+
+---
+
+### **Layout Conventions**
+- **Container max-width:** `1400px` (centered with `2rem` padding)
+- **Grid system:** CSS Grid with responsive columns (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`)
+- **Spacing:** Consistent use of Tailwind's 4px scale (`space-y-4`, `gap-6`, etc.)
+
+---
+
+### **Quick Reference CSS Variables**
+```css
+:root {
+  --background: 0 0% 93%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --primary: 89 91% 38%;
+  --accent: 28 84% 57%;
+  --muted: 0 0% 91%;
+  --muted-foreground: 0 0% 40%;
+  --border: 0 0% 85%;
+  --radius: 0.5rem;
+}
+```
+
+---
+
+This gives you everything needed to build a visually cohesive sister application! 🎨
+
+Export style guide as file
+Generate starter template files
