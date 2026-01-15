@@ -308,7 +308,15 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
         .single();
 
       if (existingInvite && !existingInvite.claimed_at) {
-        return res.status(409).json({ error: 'User already has a pending invitation' });
+        // Allow resending the email for existing pending invites
+        if (req.body.resend) {
+          isNewInvite = true; // Will trigger email below
+        } else {
+          return res.status(409).json({
+            error: 'User already has a pending invitation',
+            canResend: true
+          });
+        }
       }
 
       if (!existingInvite) {
