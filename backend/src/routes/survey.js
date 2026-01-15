@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireRole, requireDealAccess } = require('../middleware/auth');
-const { supabaseAdmin } = require('../lib/supabase');
 
 // All routes require authentication
 router.use(authenticate);
@@ -15,7 +14,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
     const { dealId } = req.params;
 
     // Get responses
-    const { data: responses, error } = await supabaseAdmin
+    const { data: responses, error } = await req.supabase
       .from('survey_responses')
       .select('*')
       .eq('deal_id', dealId);
@@ -23,7 +22,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
     if (error) throw error;
 
     // Get progress
-    const { data: progress } = await supabaseAdmin
+    const { data: progress } = await req.supabase
       .from('survey_progress')
       .select('*')
       .eq('deal_id', dealId)
@@ -90,7 +89,7 @@ router.post('/:dealId/responses', requireDealAccess, async (req, res) => {
     }
 
     // Upsert responses
-    const { error: upsertError } = await supabaseAdmin
+    const { error: upsertError } = await req.supabase
       .from('survey_responses')
       .upsert(upsertData, {
         onConflict: 'deal_id,section_id,question_id'
@@ -99,7 +98,7 @@ router.post('/:dealId/responses', requireDealAccess, async (req, res) => {
     if (upsertError) throw upsertError;
 
     // Update progress
-    await updateSurveyProgress(dealId);
+    await updateSurveyProgress(req.supabase, dealId);
 
     res.json({ success: true, saved: upsertData.length });
   } catch (error) {
@@ -132,7 +131,7 @@ router.patch('/:dealId/response/:sectionId/:questionId', requireDealAccess, asyn
       if (flagged !== undefined) updateData.flagged = flagged;
     }
 
-    const { data: response, error } = await supabaseAdmin
+    const { data: response, error } = await req.supabase
       .from('survey_responses')
       .upsert({
         deal_id: dealId,
@@ -149,7 +148,7 @@ router.patch('/:dealId/response/:sectionId/:questionId', requireDealAccess, asyn
 
     // Update progress if answer changed
     if (answer !== undefined) {
-      await updateSurveyProgress(dealId);
+      await updateSurveyProgress(req.supabase, dealId);
     }
 
     res.json(response);
@@ -167,7 +166,7 @@ router.get('/:dealId/flagged', requireRole(['admin', 'team_member']), async (req
   try {
     const { dealId } = req.params;
 
-    const { data: flagged, error } = await supabaseAdmin
+    const { data: flagged, error } = await req.supabase
       .from('survey_responses')
       .select('*')
       .eq('deal_id', dealId)
@@ -185,7 +184,7 @@ router.get('/:dealId/flagged', requireRole(['admin', 'team_member']), async (req
 /**
  * Helper: Update survey progress for a deal
  */
-async function updateSurveyProgress(dealId) {
+async function updateSurveyProgress(supabase, dealId) {
   try {
     const surveyConfig = require('../../../config/survey.json');
 
@@ -196,7 +195,7 @@ async function updateSurveyProgress(dealId) {
     );
 
     // Count answered questions
-    const { count: answeredCount } = await supabaseAdmin
+    const { count: answeredCount } = await supabase
       .from('survey_responses')
       .select('*', { count: 'exact', head: true })
       .eq('deal_id', dealId)
@@ -215,7 +214,7 @@ async function updateSurveyProgress(dealId) {
 
     // Mark as started if first answer
     if (answeredCount > 0) {
-      const { data: progress } = await supabaseAdmin
+      const { data: progress } = await supabase
         .from('survey_progress')
         .select('started_at')
         .eq('deal_id', dealId)
@@ -231,7 +230,7 @@ async function updateSurveyProgress(dealId) {
       updateData.completed_at = new Date().toISOString();
     }
 
-    await supabaseAdmin
+    await supabase
       .from('survey_progress')
       .upsert({
         deal_id: dealId,

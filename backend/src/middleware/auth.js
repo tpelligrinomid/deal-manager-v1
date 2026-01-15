@@ -14,15 +14,17 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    // Verify the token with Supabase
-    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    // Verify the token by creating a client with the user's token
+    // This works without service role key - the token authenticates itself
+    const userClient = createSupabaseClient(token);
+    const { data: { user }, error } = await userClient.auth.getUser();
 
     if (error || !user) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // Get user profile with role
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // Get user profile with role (using user's client, respects RLS)
+    const { data: profile, error: profileError } = await userClient
       .from('profiles')
       .select('*')
       .eq('id', user.id)
@@ -95,8 +97,8 @@ const requireDealAccess = async (req, res, next) => {
       return next();
     }
 
-    // Check deal_access table for other users
-    const { data: access, error } = await supabaseAdmin
+    // Check deal_access table for other users using user's authenticated client
+    const { data: access, error } = await req.supabase
       .from('deal_access')
       .select('*')
       .eq('deal_id', dealId)

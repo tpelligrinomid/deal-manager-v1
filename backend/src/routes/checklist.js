@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireRole, requireDealAccess } = require('../middleware/auth');
-const { supabaseAdmin } = require('../lib/supabase');
 const checklistTemplate = require('../../../config/checklist-template.json');
 
 // All routes require authentication
@@ -16,7 +15,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
     const { dealId } = req.params;
     const { category, status } = req.query;
 
-    let query = supabaseAdmin
+    let query = req.supabase
       .from('checklist_items')
       .select(`
         *,
@@ -106,7 +105,7 @@ router.patch('/:dealId/:itemId', requireDealAccess, async (req, res) => {
       updateData.seller_notes = seller_notes;
     }
 
-    const { data: item, error } = await supabaseAdmin
+    const { data: item, error } = await req.supabase
       .from('checklist_items')
       .update(updateData)
       .eq('id', itemId)
@@ -137,7 +136,7 @@ router.post('/:dealId', requireRole(['admin', 'team_member']), async (req, res) 
     }
 
     // Get max sort_order for category
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await req.supabase
       .from('checklist_items')
       .select('sort_order')
       .eq('deal_id', dealId)
@@ -147,7 +146,7 @@ router.post('/:dealId', requireRole(['admin', 'team_member']), async (req, res) 
 
     const sortOrder = (existing?.[0]?.sort_order || 0) + 1;
 
-    const { data: item, error } = await supabaseAdmin
+    const { data: item, error } = await req.supabase
       .from('checklist_items')
       .insert({
         deal_id: dealId,
@@ -177,7 +176,7 @@ router.delete('/:dealId/:itemId', requireRole(['admin', 'team_member']), async (
   try {
     const { dealId, itemId } = req.params;
 
-    const { error } = await supabaseAdmin
+    const { error } = await req.supabase
       .from('checklist_items')
       .delete()
       .eq('id', itemId)
@@ -200,7 +199,7 @@ router.post('/:dealId/request-all', requireRole(['admin', 'team_member']), async
   try {
     const { dealId } = req.params;
 
-    const { data: items, error } = await supabaseAdmin
+    const { data: items, error } = await req.supabase
       .from('checklist_items')
       .update({
         status: 'requested',
@@ -230,14 +229,14 @@ router.post('/:dealId/reset-from-template', requireRole('admin'), async (req, re
 
     // If not preserving custom, delete all existing items
     if (!preserve_custom) {
-      await supabaseAdmin
+      await req.supabase
         .from('checklist_items')
         .delete()
         .eq('deal_id', dealId);
     }
 
     // Get existing item names to avoid duplicates
-    const { data: existing } = await supabaseAdmin
+    const { data: existing } = await req.supabase
       .from('checklist_items')
       .select('item_name, category')
       .eq('deal_id', dealId);
@@ -265,7 +264,7 @@ router.post('/:dealId/reset-from-template', requireRole('admin'), async (req, re
     }
 
     if (newItems.length > 0) {
-      await supabaseAdmin
+      await req.supabase
         .from('checklist_items')
         .insert(newItems);
     }

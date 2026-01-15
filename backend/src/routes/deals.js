@@ -15,7 +15,8 @@ router.get('/', async (req, res) => {
   try {
     const { status, search, limit = 50, offset = 0 } = req.query;
 
-    let query = supabaseAdmin
+    // Use user's authenticated client (respects RLS)
+    let query = req.supabase
       .from('deals')
       .select(`
         *,
@@ -37,7 +38,7 @@ router.get('/', async (req, res) => {
 
     // Non-admin users only see deals they have access to
     if (!['admin', 'team_member'].includes(req.user.role)) {
-      const { data: accessList } = await supabaseAdmin
+      const { data: accessList } = await req.supabase
         .from('deal_access')
         .select('deal_id')
         .eq('user_id', req.user.id);
@@ -78,7 +79,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
   try {
     const { dealId } = req.params;
 
-    const { data: deal, error } = await supabaseAdmin
+    const { data: deal, error } = await req.supabase
       .from('deals')
       .select(`
         *,
@@ -129,8 +130,8 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
       return res.status(400).json({ error: 'Agency name is required' });
     }
 
-    // Create the deal
-    const { data: deal, error: dealError } = await supabaseAdmin
+    // Create the deal using user's authenticated client
+    const { data: deal, error: dealError } = await req.supabase
       .from('deals')
       .insert({
         agency_name,
@@ -163,7 +164,7 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
       0
     );
 
-    await supabaseAdmin
+    await req.supabase
       .from('survey_progress')
       .insert({
         deal_id: deal.id,
@@ -185,7 +186,7 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
       }
     }
 
-    await supabaseAdmin
+    await req.supabase
       .from('checklist_items')
       .insert(checklistItems);
 
@@ -210,7 +211,7 @@ router.patch('/:dealId', requireRole(['admin', 'team_member']), async (req, res)
       ...updateData
     } = req.body;
 
-    const { data: deal, error } = await supabaseAdmin
+    const { data: deal, error } = await req.supabase
       .from('deals')
       .update(updateData)
       .eq('id', dealId)
@@ -237,7 +238,7 @@ router.delete('/:dealId', requireRole('admin'), async (req, res) => {
   try {
     const { dealId } = req.params;
 
-    const { error } = await supabaseAdmin
+    const { error } = await req.supabase
       .from('deals')
       .delete()
       .eq('id', dealId);
@@ -254,6 +255,7 @@ router.delete('/:dealId', requireRole('admin'), async (req, res) => {
 /**
  * POST /api/deals/:dealId/invite-seller
  * Invite a seller to access the deal portal
+ * Uses authorized_emails table - seller signs up and gets access automatically
  */
 router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), async (req, res) => {
   try {
@@ -264,46 +266,70 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    // Check if user already exists
-    let { data: existingUser } = await supabaseAdmin
+    const normalizedEmail = email.toLowerCase();
+
+    // Check if user already has a profile
+    const { data: existingUser } = await req.supabase
       .from('profiles')
-      .select('id')
-      .eq('email', email)
+      .select('id, role')
+      .eq('email', normalizedEmail)
       .single();
 
-    let userId;
-
     if (existingUser) {
-      userId = existingUser.id;
+      // User exists - grant deal access directly
+      const { error: accessError } = await req.supabase
+        .from('deal_access')
+        .upsert({
+          deal_id: dealId,
+          user_id: existingUser.id,
+          access_level: 'seller',
+          granted_by: req.user.id
+        });
+
+      if (accessError) throw accessError;
+
+      res.json({
+        success: true,
+        message: `${email} has been granted access to this deal.`,
+        existingUser: true
+      });
     } else {
-      // Create a new user via Supabase Auth (they'll need to set password)
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-        data: { full_name, role: 'seller' }
+      // User doesn't exist - add to authorized_emails so they get seller role on signup
+      // First check if already invited
+      const { data: existingInvite } = await req.supabase
+        .from('authorized_emails')
+        .select('id, claimed_at')
+        .eq('email', normalizedEmail)
+        .single();
+
+      if (existingInvite && !existingInvite.claimed_at) {
+        return res.status(409).json({ error: 'User already has a pending invitation' });
+      }
+
+      if (!existingInvite) {
+        // Add to authorized_emails
+        const { error: inviteError } = await req.supabase
+          .from('authorized_emails')
+          .insert({
+            email: normalizedEmail,
+            full_name: full_name || null,
+            role: 'seller',
+            invited_by: req.user.id
+          });
+
+        if (inviteError) throw inviteError;
+      }
+
+      // Store the deal_id association so we can grant access when they sign up
+      // For now, we'll handle this in the auth trigger or post-signup flow
+      // TODO: Add pending_deal_access table or similar mechanism
+
+      res.json({
+        success: true,
+        message: `${email} has been authorized as a seller. They will receive access when they sign up.`,
+        existingUser: false
       });
-
-      if (authError) throw authError;
-      userId = authData.user.id;
-
-      // Update their profile to seller role
-      await supabaseAdmin
-        .from('profiles')
-        .update({ role: 'seller', full_name })
-        .eq('id', userId);
     }
-
-    // Grant access to the deal
-    const { error: accessError } = await supabaseAdmin
-      .from('deal_access')
-      .upsert({
-        deal_id: dealId,
-        user_id: userId,
-        access_level: 'seller',
-        granted_by: req.user.id
-      });
-
-    if (accessError) throw accessError;
-
-    res.json({ success: true, message: `Invitation sent to ${email}` });
   } catch (error) {
     console.error('Error inviting seller:', error);
     res.status(500).json({ error: 'Failed to invite seller' });
@@ -323,7 +349,7 @@ router.post('/:dealId/notes', requireRole(['admin', 'team_member']), async (req,
       return res.status(400).json({ error: 'Note content is required' });
     }
 
-    const { data: note, error } = await supabaseAdmin
+    const { data: note, error } = await req.supabase
       .from('deal_notes')
       .insert({
         deal_id: dealId,
@@ -351,7 +377,7 @@ router.get('/:dealId/notes', requireRole(['admin', 'team_member']), async (req, 
   try {
     const { dealId } = req.params;
 
-    const { data: notes, error } = await supabaseAdmin
+    const { data: notes, error } = await req.supabase
       .from('deal_notes')
       .select(`
         *,

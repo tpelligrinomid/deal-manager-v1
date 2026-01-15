@@ -32,7 +32,7 @@ router.patch('/me', async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (company_name !== undefined) updateData.company_name = company_name;
 
-    const { data: profile, error } = await supabaseAdmin
+    const { data: profile, error } = await req.supabase
       .from('profiles')
       .update(updateData)
       .eq('id', req.user.id)
@@ -56,7 +56,7 @@ router.get('/', requireRole(['admin', 'team_member']), async (req, res) => {
   try {
     const { role, search, limit = 50, offset = 0 } = req.query;
 
-    let query = supabaseAdmin
+    let query = req.supabase
       .from('profiles')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -89,7 +89,7 @@ router.get('/:userId', requireRole(['admin', 'team_member']), async (req, res) =
   try {
     const { userId } = req.params;
 
-    const { data: user, error } = await supabaseAdmin
+    const { data: user, error } = await req.supabase
       .from('profiles')
       .select(`
         *,
@@ -130,7 +130,7 @@ router.patch('/:userId', requireRole('admin'), async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (company_name !== undefined) updateData.company_name = company_name;
 
-    const { data: profile, error } = await supabaseAdmin
+    const { data: profile, error } = await req.supabase
       .from('profiles')
       .update(updateData)
       .eq('id', userId)
@@ -166,7 +166,7 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
     }
 
     // Check if already on allowlist
-    const { data: existingInvite } = await supabaseAdmin
+    const { data: existingInvite } = await req.supabase
       .from('authorized_emails')
       .select('id, email, claimed_at')
       .eq('email', email.toLowerCase())
@@ -180,7 +180,7 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
     }
 
     // Check if they already have a profile (signed up before invite system)
-    const { data: existingProfile } = await supabaseAdmin
+    const { data: existingProfile } = await req.supabase
       .from('profiles')
       .select('id, email')
       .eq('email', email.toLowerCase())
@@ -191,7 +191,7 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
     }
 
     // Add to allowlist
-    const { data: invite, error } = await supabaseAdmin
+    const { data: invite, error } = await req.supabase
       .from('authorized_emails')
       .insert({
         email: email.toLowerCase(),
@@ -222,7 +222,7 @@ router.post('/invite', requireRole('admin'), async (req, res) => {
  */
 router.get('/invites', requireRole('admin'), async (req, res) => {
   try {
-    const { data: invites, error } = await supabaseAdmin
+    const { data: invites, error } = await req.supabase
       .from('authorized_emails')
       .select('*')
       .is('claimed_at', null)
@@ -245,7 +245,7 @@ router.delete('/invites/:inviteId', requireRole('admin'), async (req, res) => {
   try {
     const { inviteId } = req.params;
 
-    const { error } = await supabaseAdmin
+    const { error } = await req.supabase
       .from('authorized_emails')
       .delete()
       .eq('id', inviteId)
@@ -273,7 +273,7 @@ router.delete('/:userId', requireRole('admin'), async (req, res) => {
       return res.status(400).json({ error: 'Cannot delete your own account' });
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await req.supabase
       .from('profiles')
       .delete()
       .eq('id', userId);
@@ -293,7 +293,7 @@ router.delete('/:userId', requireRole('admin'), async (req, res) => {
  */
 router.get('/team/members', requireRole(['admin', 'team_member']), async (req, res) => {
   try {
-    const { data: team, error } = await supabaseAdmin
+    const { data: team, error } = await req.supabase
       .from('profiles')
       .select('id, email, full_name, role')
       .in('role', ['admin', 'team_member'])

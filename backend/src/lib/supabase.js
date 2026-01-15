@@ -19,15 +19,20 @@ const createSupabaseClient = (accessToken) => {
   });
 };
 
-// Admin client for server-side operations (bypasses RLS)
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+// Admin client for server-side operations
+// Uses service role key if available (bypasses RLS), otherwise uses anon key (respects RLS)
+const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey || supabaseAnonKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false
   }
 });
 
+// Flag to check if we have full admin capabilities
+const hasServiceRole = !!supabaseServiceKey;
+
 module.exports = {
   createSupabaseClient,
-  supabaseAdmin
+  supabaseAdmin,
+  hasServiceRole
 };

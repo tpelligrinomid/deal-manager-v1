@@ -5,7 +5,6 @@ const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const { authenticate, requireRole, requireDealAccess } = require('../middleware/auth');
-const { supabaseAdmin } = require('../lib/supabase');
 
 // All routes require authentication
 router.use(authenticate);
@@ -69,7 +68,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
     const { dealId } = req.params;
     const { category } = req.query;
 
-    let query = supabaseAdmin
+    let query = req.supabase
       .from('documents')
       .select(`
         *,
@@ -112,7 +111,7 @@ router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (
     }
 
     // Create document record
-    const { data: document, error } = await supabaseAdmin
+    const { data: document, error } = await req.supabase
       .from('documents')
       .insert({
         deal_id: dealId,
@@ -134,7 +133,7 @@ router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (
 
     // If linked to a checklist item, update its status
     if (checklist_item_id) {
-      await supabaseAdmin
+      await req.supabase
         .from('checklist_items')
         .update({
           status: 'received',
@@ -163,7 +162,7 @@ router.get('/:dealId/:documentId/download', requireDealAccess, async (req, res) 
   try {
     const { dealId, documentId } = req.params;
 
-    const { data: document, error } = await supabaseAdmin
+    const { data: document, error } = await req.supabase
       .from('documents')
       .select('*')
       .eq('id', documentId)
@@ -209,7 +208,7 @@ router.patch('/:dealId/:documentId', requireRole(['admin', 'team_member']), asyn
     if (seller_visible !== undefined) updateData.seller_visible = seller_visible;
     if (checklist_item_id !== undefined) updateData.checklist_item_id = checklist_item_id;
 
-    const { data: document, error } = await supabaseAdmin
+    const { data: document, error } = await req.supabase
       .from('documents')
       .update(updateData)
       .eq('id', documentId)
@@ -235,7 +234,7 @@ router.delete('/:dealId/:documentId', requireRole(['admin', 'team_member']), asy
     const { dealId, documentId } = req.params;
 
     // Get document to find file path
-    const { data: document, error: fetchError } = await supabaseAdmin
+    const { data: document, error: fetchError } = await req.supabase
       .from('documents')
       .select('file_path')
       .eq('id', documentId)
@@ -247,7 +246,7 @@ router.delete('/:dealId/:documentId', requireRole(['admin', 'team_member']), asy
     }
 
     // Delete from database
-    const { error: deleteError } = await supabaseAdmin
+    const { error: deleteError } = await req.supabase
       .from('documents')
       .delete()
       .eq('id', documentId);
@@ -276,7 +275,7 @@ router.get('/:dealId/categories', requireDealAccess, async (req, res) => {
   try {
     const { dealId } = req.params;
 
-    const { data: documents, error } = await supabaseAdmin
+    const { data: documents, error } = await req.supabase
       .from('documents')
       .select('category')
       .eq('deal_id', dealId);
