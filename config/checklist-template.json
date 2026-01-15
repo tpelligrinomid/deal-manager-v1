@@ -1,0 +1,301 @@
+{
+  "version": "1.0",
+  "name": "Standard Agency Due Diligence",
+  "description": "Default checklist for agency acquisitions. Items can be added, removed, or modified per deal.",
+  "categories": [
+    {
+      "id": "financial",
+      "name": "Financial",
+      "items": [
+        {
+          "id": "tax_returns_3yr",
+          "name": "Tax Returns (3 years)",
+          "description": "Federal and state tax returns for the past 3 fiscal years",
+          "required": true
+        },
+        {
+          "id": "pnl_3yr",
+          "name": "Profit & Loss Statements (3 years)",
+          "description": "Annual P&L statements for the past 3 years",
+          "required": true
+        },
+        {
+          "id": "pnl_ytd",
+          "name": "Year-to-Date P&L",
+          "description": "Current year profit & loss through most recent month",
+          "required": true
+        },
+        {
+          "id": "balance_sheet",
+          "name": "Balance Sheet (Current)",
+          "description": "Most recent balance sheet",
+          "required": true
+        },
+        {
+          "id": "ar_aging",
+          "name": "Accounts Receivable Aging",
+          "description": "Current AR aging report showing outstanding invoices",
+          "required": true
+        },
+        {
+          "id": "ap_aging",
+          "name": "Accounts Payable Aging",
+          "description": "Current AP aging report showing outstanding bills",
+          "required": true
+        },
+        {
+          "id": "bank_statements",
+          "name": "Bank Statements (12 months)",
+          "description": "All business bank account statements for past 12 months",
+          "required": true
+        },
+        {
+          "id": "revenue_by_client",
+          "name": "Revenue by Client",
+          "description": "Breakdown of revenue by client for past 12-24 months",
+          "required": true
+        },
+        {
+          "id": "revenue_by_service",
+          "name": "Revenue by Service Line",
+          "description": "Breakdown of revenue by service offering",
+          "required": false
+        },
+        {
+          "id": "monthly_recurring_revenue",
+          "name": "MRR Analysis",
+          "description": "Monthly recurring revenue trends and breakdown",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "legal",
+      "name": "Legal & Entity",
+      "items": [
+        {
+          "id": "entity_docs",
+          "name": "Entity Formation Documents",
+          "description": "Articles of incorporation, operating agreement, bylaws, etc.",
+          "required": true
+        },
+        {
+          "id": "ownership_docs",
+          "name": "Ownership Documentation",
+          "description": "Stock certificates, cap table, or membership interest records",
+          "required": true
+        },
+        {
+          "id": "dba_registrations",
+          "name": "DBA / Trade Name Registrations",
+          "description": "Any 'doing business as' filings",
+          "required": false
+        },
+        {
+          "id": "business_licenses",
+          "name": "Business Licenses",
+          "description": "Current business licenses and permits",
+          "required": true
+        },
+        {
+          "id": "litigation_history",
+          "name": "Litigation History",
+          "description": "Summary of any past, pending, or threatened litigation",
+          "required": true
+        },
+        {
+          "id": "trademark_ip",
+          "name": "Trademark / IP Documentation",
+          "description": "Trademark registrations, copyrights, patents if any",
+          "required": false
+        },
+        {
+          "id": "nda_templates",
+          "name": "Standard NDA / Confidentiality Agreements",
+          "description": "Templates used with clients and vendors",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "hr",
+      "name": "HR & Personnel",
+      "items": [
+        {
+          "id": "employee_roster",
+          "name": "Employee Roster",
+          "description": "List of all employees with titles, start dates, and locations",
+          "required": true
+        },
+        {
+          "id": "salary_details",
+          "name": "Compensation Details",
+          "description": "Salary/wage information for all employees",
+          "required": true
+        },
+        {
+          "id": "benefits_summary",
+          "name": "Benefits Summary",
+          "description": "Overview of health insurance, 401k, PTO, and other benefits",
+          "required": true
+        },
+        {
+          "id": "employment_agreements",
+          "name": "Employment Agreements",
+          "description": "Offer letters, employment contracts, non-competes",
+          "required": true
+        },
+        {
+          "id": "contractor_agreements",
+          "name": "Contractor Agreements",
+          "description": "Agreements with regular contractors/freelancers",
+          "required": true
+        },
+        {
+          "id": "employee_handbook",
+          "name": "Employee Handbook",
+          "description": "Current employee handbook or policies document",
+          "required": false
+        },
+        {
+          "id": "org_chart",
+          "name": "Organizational Chart",
+          "description": "Visual representation of company structure",
+          "required": true
+        },
+        {
+          "id": "payroll_reports",
+          "name": "Payroll Reports (12 months)",
+          "description": "Payroll summaries for the past 12 months",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "clients",
+      "name": "Clients & Contracts",
+      "items": [
+        {
+          "id": "client_list",
+          "name": "Client List",
+          "description": "Complete list of active clients with contact info",
+          "required": true
+        },
+        {
+          "id": "client_contracts",
+          "name": "Client Contracts / MSAs",
+          "description": "Master service agreements and contracts for top clients",
+          "required": true
+        },
+        {
+          "id": "client_tenure",
+          "name": "Client Tenure Report",
+          "description": "List showing how long each client has been with the agency",
+          "required": true
+        },
+        {
+          "id": "client_concentration",
+          "name": "Client Concentration Analysis",
+          "description": "Revenue breakdown showing concentration percentages",
+          "required": true
+        },
+        {
+          "id": "client_churn",
+          "name": "Client Churn History",
+          "description": "Lost clients over past 24 months with reasons",
+          "required": false
+        },
+        {
+          "id": "pending_proposals",
+          "name": "Pending Proposals / Pipeline",
+          "description": "Active proposals and sales pipeline",
+          "required": false
+        },
+        {
+          "id": "case_studies",
+          "name": "Case Studies / Portfolio",
+          "description": "Examples of client work and results",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "operations",
+      "name": "Operations",
+      "items": [
+        {
+          "id": "tech_stack",
+          "name": "Technology Stack Inventory",
+          "description": "List of all software, tools, and subscriptions with costs",
+          "required": true
+        },
+        {
+          "id": "sops_documentation",
+          "name": "SOPs / Process Documentation",
+          "description": "Standard operating procedures for key processes",
+          "required": true
+        },
+        {
+          "id": "vendor_list",
+          "name": "Vendor List",
+          "description": "List of key vendors and service providers",
+          "required": true
+        },
+        {
+          "id": "vendor_contracts",
+          "name": "Key Vendor Contracts",
+          "description": "Contracts with significant vendors (hosting, tools, white-label partners)",
+          "required": true
+        },
+        {
+          "id": "lease_agreements",
+          "name": "Office Lease / Real Estate",
+          "description": "Office lease agreement if applicable",
+          "required": false
+        },
+        {
+          "id": "equipment_list",
+          "name": "Equipment / Asset List",
+          "description": "Inventory of computers, equipment, and physical assets",
+          "required": false
+        }
+      ]
+    },
+    {
+      "id": "insurance",
+      "name": "Insurance",
+      "items": [
+        {
+          "id": "eo_insurance",
+          "name": "E&O / Professional Liability Insurance",
+          "description": "Errors & omissions insurance policy",
+          "required": true
+        },
+        {
+          "id": "general_liability",
+          "name": "General Liability Insurance",
+          "description": "General liability insurance policy",
+          "required": true
+        },
+        {
+          "id": "cyber_insurance",
+          "name": "Cyber Liability Insurance",
+          "description": "Cyber liability / data breach insurance if applicable",
+          "required": false
+        },
+        {
+          "id": "workers_comp",
+          "name": "Workers Compensation",
+          "description": "Workers comp policy if applicable",
+          "required": false
+        },
+        {
+          "id": "claims_history",
+          "name": "Insurance Claims History",
+          "description": "Record of any insurance claims filed",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

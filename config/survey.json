@@ -1,0 +1,1107 @@
+{
+  "version": "2.0",
+  "title": "Agency Audit Questionnaire",
+  "description": "This questionnaire helps us understand how your business operates beyond just the financials. Your responses will inform our evaluation process and help ensure a smooth transition if we move forward.",
+  "sections": [
+    {
+      "id": "owner_background",
+      "title": "Owner Background & Vision",
+      "description": "Help us understand you as the founder and your personal journey.",
+      "questions": [
+        {
+          "id": "owner_bio",
+          "type": "textarea",
+          "label": "Describe your position, including how long ago you founded the agency and a brief snapshot of your previous positions (headline bio).",
+          "required": true,
+          "maxLength": 3000
+        },
+        {
+          "id": "owner_influences",
+          "type": "textarea",
+          "label": "What has influenced you most (people, books, life factors and so on)?",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "greatest_achievement",
+          "type": "textarea",
+          "label": "What is your greatest life achievement?",
+          "required": false,
+          "maxLength": 2000
+        },
+        {
+          "id": "business_accomplishment_goal",
+          "type": "textarea",
+          "label": "What one thing, more than anything else, do you want to accomplish in this business before you get out?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "owner_goals",
+          "type": "textarea",
+          "label": "What are your goals (as owner/founder/s)?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "ultimate_goals",
+          "type": "textarea",
+          "label": "What are your ultimate goals for the business - personally and professionally?",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "time_allocation",
+          "type": "textarea",
+          "label": "Explain where all your time is being spent versus where it should be spent.",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "owner_weekly_hours",
+          "type": "select",
+          "label": "How many hours per week do you typically work in the business?",
+          "required": true,
+          "options": [
+            "Less than 20 hours",
+            "20-30 hours",
+            "30-40 hours",
+            "40-50 hours",
+            "50-60 hours",
+            "More than 60 hours"
+          ]
+        },
+        {
+          "id": "owner_step_away",
+          "type": "textarea",
+          "label": "As an owner or founder, have you ever stepped away from the business for more than two weeks? If so, how did you manage the company while stepping away?",
+          "required": true,
+          "maxLength": 1500
+        }
+      ]
+    },
+    {
+      "id": "business_overview",
+      "title": "Business Overview",
+      "description": "Tell us about your agency's identity and market position.",
+      "questions": [
+        {
+          "id": "founding_year",
+          "type": "number",
+          "label": "What year was the agency founded?",
+          "required": true,
+          "min": 1900,
+          "max": 2026
+        },
+        {
+          "id": "agency_description",
+          "type": "textarea",
+          "label": "How do you describe your agency to someone outside the industry? (The jargon-free version)",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "client_value_prop",
+          "type": "textarea",
+          "label": "What does a client get when they work with your agency?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "best_at",
+          "type": "textarea",
+          "label": "What's the one thing your agency does better than anyone else?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "competitive_advantage",
+          "type": "textarea",
+          "label": "What makes your agency better than the competition? Why does a prospect choose to purchase from your agency vs. another?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "primary_services",
+          "type": "multiselect",
+          "label": "What are your primary service offerings?",
+          "required": true,
+          "options": [
+            "SEO / Search Engine Optimization",
+            "PPC / Paid Search",
+            "Social Media Marketing",
+            "Social Media Management",
+            "Content Marketing",
+            "Email Marketing",
+            "Web Design & Development",
+            "Branding & Creative",
+            "Video Production",
+            "Podcast Production",
+            "PR / Public Relations",
+            "Marketing Strategy / Consulting",
+            "Analytics & Reporting",
+            "CRO / Conversion Optimization",
+            "Influencer Marketing",
+            "Affiliate Marketing",
+            "Other"
+          ]
+        },
+        {
+          "id": "revenue_by_service",
+          "type": "textarea",
+          "label": "Where does most of your business come from? Can you provide a breakdown of the major service areas and how much revenue each of these drives per month?",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "desired_services",
+          "type": "textarea",
+          "label": "What products or services would you like to offer, but you don't have the capabilities right now?",
+          "required": false,
+          "maxLength": 1500
+        },
+        {
+          "id": "target_industries",
+          "type": "multiselect",
+          "label": "What industries do you primarily serve?",
+          "required": true,
+          "options": [
+            "Healthcare / Medical",
+            "Legal / Law Firms",
+            "Financial Services",
+            "Real Estate",
+            "E-commerce / Retail",
+            "SaaS / Technology",
+            "Manufacturing / Industrial",
+            "Home Services",
+            "Hospitality / Travel",
+            "Education",
+            "Nonprofit",
+            "Professional Services",
+            "Franchise",
+            "Local / Small Business",
+            "Enterprise / Fortune 500",
+            "Other"
+          ]
+        },
+        {
+          "id": "geographic_focus",
+          "type": "select",
+          "label": "What is your geographic focus?",
+          "required": true,
+          "options": [
+            "Local (single metro area)",
+            "Regional (multiple states)",
+            "National (US-wide)",
+            "North American",
+            "Global"
+          ]
+        },
+        {
+          "id": "three_year_vision",
+          "type": "textarea",
+          "label": "Can you describe the vision for your agency in the next three years? Please describe the services that you would add or the employees and skills that you would need to adjust.",
+          "required": true,
+          "maxLength": 2000
+        }
+      ]
+    },
+    {
+      "id": "ownership_structure",
+      "title": "Ownership & Corporate Structure",
+      "description": "Help us understand the ownership and organizational structure.",
+      "questions": [
+        {
+          "id": "ownership_structure_type",
+          "type": "select",
+          "label": "What is the current ownership structure?",
+          "required": true,
+          "options": [
+            "Sole proprietor (100% single owner)",
+            "Partnership (2 owners)",
+            "Partnership (3+ owners)",
+            "Corporation with single shareholder",
+            "Corporation with multiple shareholders",
+            "Other"
+          ]
+        },
+        {
+          "id": "owner_count",
+          "type": "number",
+          "label": "How many owners/partners are there?",
+          "required": true,
+          "min": 1,
+          "max": 20
+        },
+        {
+          "id": "cap_table_compensation",
+          "type": "textarea",
+          "label": "Describe the full ownership structure, cap table, and compensation (salary totals and disbursements).",
+          "placeholder": "Include ownership percentages and total owner compensation",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "corporate_structure",
+          "type": "textarea",
+          "label": "Can you describe the corporate structure of your organization? Who is the CEO? Who is responsible for Finance, Technology, Marketing/Sales, and Strategy/Creative/Operations?",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "sports_team_analogy",
+          "type": "textarea",
+          "label": "Describe your company as a sports team. Who are your key players and how much are they paid?",
+          "placeholder": "This helps us understand the team dynamics and key personnel",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "power_structure",
+          "type": "textarea",
+          "label": "What is the power structure? Please consider communication style(s), whether hands-on/hands-off regarding management, who the key decision-makers are, and so on.",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "succession_readiness",
+          "type": "select",
+          "label": "How prepared is the business to operate without you?",
+          "required": true,
+          "options": [
+            "Very prepared - I could step away tomorrow",
+            "Somewhat prepared - would need 1-2 months transition",
+            "Partially prepared - key areas still depend on me",
+            "Not prepared - business heavily relies on my involvement",
+            "Uncertain"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "team_structure",
+      "title": "Team & Organizational Structure",
+      "description": "Tell us about your team composition and how work gets done.",
+      "questions": [
+        {
+          "id": "has_employees",
+          "type": "boolean",
+          "label": "Do you have W-2 employees (not including owners)?",
+          "required": true
+        },
+        {
+          "id": "employee_count",
+          "type": "number",
+          "label": "How many W-2 employees do you have?",
+          "required": true,
+          "min": 0,
+          "max": 500,
+          "condition": {
+            "questionId": "has_employees",
+            "value": true
+          }
+        },
+        {
+          "id": "key_employees",
+          "type": "textarea",
+          "label": "Other than the owners and founders, who are your top two or three key employees and why?",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "employee_churn_rate",
+          "type": "textarea",
+          "label": "What is your employee churn rate?",
+          "placeholder": "Annual percentage or description of turnover",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "employee_remote",
+          "type": "select",
+          "label": "What is your team's work arrangement?",
+          "required": true,
+          "options": [
+            "Fully remote",
+            "Hybrid (some in-office, some remote)",
+            "Fully in-office",
+            "Mix of arrangements"
+          ]
+        },
+        {
+          "id": "uses_contractors",
+          "type": "boolean",
+          "label": "Do you use contractors or freelancers?",
+          "required": true
+        },
+        {
+          "id": "key_contractors",
+          "type": "textarea",
+          "label": "Do you have any key freelancers or contractors that you typically leverage regularly?",
+          "required": true,
+          "maxLength": 1500,
+          "condition": {
+            "questionId": "uses_contractors",
+            "value": true
+          }
+        },
+        {
+          "id": "contractor_count",
+          "type": "number",
+          "label": "How many contractors do you regularly work with?",
+          "required": true,
+          "min": 0,
+          "max": 100,
+          "condition": {
+            "questionId": "uses_contractors",
+            "value": true
+          }
+        },
+        {
+          "id": "offshore_resources",
+          "type": "boolean",
+          "label": "Do you use any offshore or international resources?",
+          "required": true
+        },
+        {
+          "id": "offshore_details",
+          "type": "textarea",
+          "label": "Describe your offshore/international resources.",
+          "placeholder": "Where are they located? What do they do?",
+          "required": true,
+          "maxLength": 1000,
+          "condition": {
+            "questionId": "offshore_resources",
+            "value": true
+          }
+        },
+        {
+          "id": "capacity_expansion",
+          "type": "textarea",
+          "label": "Explain, realistically, how much more business you can add without having to add any more people, equipment, service or space.",
+          "required": true,
+          "maxLength": 1500
+        }
+      ]
+    },
+    {
+      "id": "hr_operations",
+      "title": "HR & People Operations",
+      "description": "Tell us about how you manage your team.",
+      "questions": [
+        {
+          "id": "pay_frequency",
+          "type": "select",
+          "label": "How do you pay employees (biweekly, bimonthly)?",
+          "required": true,
+          "options": [
+            "Weekly",
+            "Biweekly (every two weeks)",
+            "Semi-monthly (twice per month)",
+            "Monthly",
+            "Other"
+          ]
+        },
+        {
+          "id": "payroll_software",
+          "type": "text",
+          "label": "What payroll processing software or company do you use?",
+          "placeholder": "e.g., Gusto, ADP, Paychex, QuickBooks Payroll",
+          "required": true
+        },
+        {
+          "id": "performance_reviews",
+          "type": "textarea",
+          "label": "Can you describe how you handle performance reviews and how often employees get raises?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "job_descriptions",
+          "type": "textarea",
+          "label": "Do you have job descriptions and roles established? If so, how are these documented?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "performance_issues",
+          "type": "textarea",
+          "label": "Do you have any employee performance issues?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "employee_benefits",
+          "type": "textarea",
+          "label": "Do you offer employee benefits, and if so, can you describe them?",
+          "placeholder": "Health insurance, 401k, PTO, etc.",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "employee_handbook",
+          "type": "textarea",
+          "label": "Do you have an employee handbook, and how often is it updated?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "employee_performance_tracking",
+          "type": "textarea",
+          "label": "How do you track the performance of each employee?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "employee_efficiency",
+          "type": "textarea",
+          "label": "How do you know if employees are using their time efficiently?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "resource_constraints",
+          "type": "textarea",
+          "label": "How do you determine if you have resource constraints and need to hire?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "team_communication",
+          "type": "textarea",
+          "label": "How do employees communicate regularly? Do you use email, Slack, or something else?",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "meeting_cadence",
+          "type": "textarea",
+          "label": "Can you describe how your teams meet on a regular basis? Are there daily, weekly, or other types of cadences involved?",
+          "required": true,
+          "maxLength": 1500
+        }
+      ]
+    },
+    {
+      "id": "client_relationships",
+      "title": "Client Relationships",
+      "description": "Help us understand how you acquire and retain clients.",
+      "questions": [
+        {
+          "id": "active_client_count",
+          "type": "number",
+          "label": "How many active clients do you currently have?",
+          "required": true,
+          "min": 1,
+          "max": 1000
+        },
+        {
+          "id": "client_concentration",
+          "type": "select",
+          "label": "What percentage of revenue comes from your largest client?",
+          "required": true,
+          "options": [
+            "Less than 10%",
+            "10-20%",
+            "20-30%",
+            "30-40%",
+            "40-50%",
+            "More than 50%"
+          ]
+        },
+        {
+          "id": "top_five_concentration",
+          "type": "select",
+          "label": "What percentage of revenue comes from your top 5 clients?",
+          "required": true,
+          "options": [
+            "Less than 25%",
+            "25-40%",
+            "40-55%",
+            "55-70%",
+            "More than 70%"
+          ]
+        },
+        {
+          "id": "average_client_tenure",
+          "type": "select",
+          "label": "What is the average client tenure?",
+          "required": true,
+          "options": [
+            "Less than 6 months",
+            "6-12 months",
+            "1-2 years",
+            "2-3 years",
+            "3-5 years",
+            "More than 5 years"
+          ]
+        },
+        {
+          "id": "client_churn_rate",
+          "type": "select",
+          "label": "Approximately what percentage of clients do you lose per year?",
+          "required": true,
+          "options": [
+            "Less than 10%",
+            "10-20%",
+            "20-30%",
+            "30-40%",
+            "More than 40%",
+            "Unsure"
+          ]
+        },
+        {
+          "id": "client_point_of_contact",
+          "type": "textarea",
+          "label": "Who in the agency acts as the main point of contact for each client?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "client_contracts",
+          "type": "select",
+          "label": "What type of client contracts do you typically use?",
+          "required": true,
+          "options": [
+            "Month-to-month (no commitment)",
+            "3-month minimum",
+            "6-month minimum",
+            "12-month contracts",
+            "Project-based only",
+            "Mix of contract types"
+          ]
+        },
+        {
+          "id": "case_studies",
+          "type": "textarea",
+          "label": "Can you describe your top four client testimonials/case studies that you always reference in the sales cycle?",
+          "required": true,
+          "maxLength": 2500
+        }
+      ]
+    },
+    {
+      "id": "sales_pipeline",
+      "title": "Sales & Pipeline",
+      "description": "Help us understand how you generate and close new business.",
+      "questions": [
+        {
+          "id": "sales_leader",
+          "type": "textarea",
+          "label": "Can you describe who is responsible for leading the sales process?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "lead_sources",
+          "type": "textarea",
+          "label": "Can you describe where the majority of your leads get surfaced from?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "sales_cycle",
+          "type": "textarea",
+          "label": "Describe the typical sales cycle to close a sale, from generating the lead through to a close.",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "sales_cycle_length",
+          "type": "select",
+          "label": "What is your typical sales cycle length?",
+          "required": true,
+          "options": [
+            "Less than 2 weeks",
+            "2-4 weeks",
+            "1-2 months",
+            "2-3 months",
+            "3-6 months",
+            "More than 6 months"
+          ]
+        },
+        {
+          "id": "pipeline_tracking",
+          "type": "textarea",
+          "label": "How do you track your pipeline right now?",
+          "placeholder": "CRM, spreadsheet, etc.",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "active_pipeline_deals",
+          "type": "textarea",
+          "label": "How many active deals do you have in the pipeline right now?",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "healthy_pipeline",
+          "type": "textarea",
+          "label": "What do you consider to be a healthy pipeline for your agency? Please describe the number of deals or the amount of deals at any one point in time.",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "non_closed_prospects",
+          "type": "textarea",
+          "label": "What do you do with prospects that do not close?",
+          "placeholder": "Nurture campaigns, follow-up process, etc.",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "average_deal_size",
+          "type": "select",
+          "label": "What is your average monthly retainer or project size?",
+          "required": true,
+          "options": [
+            "Less than $1,000/month",
+            "$1,000 - $2,500/month",
+            "$2,500 - $5,000/month",
+            "$5,000 - $10,000/month",
+            "$10,000 - $25,000/month",
+            "More than $25,000/month"
+          ]
+        },
+        {
+          "id": "competitors",
+          "type": "textarea",
+          "label": "Can you describe your top three or four biggest competitors?",
+          "required": true,
+          "maxLength": 1500
+        }
+      ]
+    },
+    {
+      "id": "marketing",
+      "title": "Marketing",
+      "description": "Tell us about how you market your own agency.",
+      "questions": [
+        {
+          "id": "marketing_philosophy",
+          "type": "textarea",
+          "label": "Describe the company's marketing philosophy.",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "successful_marketing",
+          "type": "textarea",
+          "label": "Describe every successful advertising, selling or marketing program you have engaged in for the last three years that has worked.",
+          "required": true,
+          "maxLength": 3000
+        },
+        {
+          "id": "marketing_budget",
+          "type": "textarea",
+          "label": "Do you have a marketing budget? How much and on what do you regularly spend?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "marketing_leader",
+          "type": "textarea",
+          "label": "Describe who runs your marketing efforts?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "proposal_upload",
+          "type": "file",
+          "label": "Can you upload a recent proposal that won a deal?",
+          "required": false,
+          "accept": ".pdf,.doc,.docx,.ppt,.pptx"
+        },
+        {
+          "id": "pitch_deck_upload",
+          "type": "file",
+          "label": "Can you upload a services presentation or agency overview slide deck that you would show to a prospect?",
+          "required": false,
+          "accept": ".pdf,.ppt,.pptx"
+        }
+      ]
+    },
+    {
+      "id": "service_delivery",
+      "title": "Service Delivery & Operations",
+      "description": "Tell us about how you fulfill client work and maintain quality.",
+      "questions": [
+        {
+          "id": "fulfillment_model",
+          "type": "select",
+          "label": "How would you describe your fulfillment model?",
+          "required": true,
+          "options": [
+            "Fully in-house team",
+            "Mostly in-house with some contractors",
+            "Hybrid (significant contractor use)",
+            "Mostly contractors/freelancers",
+            "White-label partnerships",
+            "Mix depending on service"
+          ]
+        },
+        {
+          "id": "project_tracking",
+          "type": "textarea",
+          "label": "How do you track projects?",
+          "placeholder": "Project management tools, processes, etc.",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "has_sops",
+          "type": "boolean",
+          "label": "Do you have SOPs in place?",
+          "required": true
+        },
+        {
+          "id": "sop_documentation",
+          "type": "textarea",
+          "label": "If so, how are these documented?",
+          "placeholder": "Notion, Google Docs, internal wiki, etc.",
+          "required": true,
+          "maxLength": 1000,
+          "condition": {
+            "questionId": "has_sops",
+            "value": true
+          }
+        },
+        {
+          "id": "quality_assurance",
+          "type": "textarea",
+          "label": "How do you ensure quality of deliverables?",
+          "placeholder": "What review processes do you have in place?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "client_reporting",
+          "type": "select",
+          "label": "How often do you provide performance reports to clients?",
+          "required": true,
+          "options": [
+            "Weekly",
+            "Bi-weekly",
+            "Monthly",
+            "Quarterly",
+            "On request only",
+            "Real-time dashboards"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "financial_context",
+      "title": "Financial Context",
+      "description": "Provide context around your financials that numbers alone don't show.",
+      "questions": [
+        {
+          "id": "cogs_percentage",
+          "type": "textarea",
+          "label": "What percentage of revenue is COGS (that doesn't include employees but does include outside contractors and other similar expenses)?",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "cash_comfort",
+          "type": "textarea",
+          "label": "How much cash does the company generally keep in the bank to feel comfortable?",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "top_expenses",
+          "type": "textarea",
+          "label": "What are your top three biggest expenses each month?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "revenue_seasonality",
+          "type": "select",
+          "label": "How seasonal is your revenue?",
+          "required": true,
+          "options": [
+            "Very consistent throughout the year",
+            "Slight seasonal variation",
+            "Moderate seasonality",
+            "Significant seasonality",
+            "Highly seasonal (major swings)"
+          ]
+        },
+        {
+          "id": "seasonality_details",
+          "type": "textarea",
+          "label": "If seasonal, describe the pattern.",
+          "placeholder": "Which months are strongest/weakest? Why?",
+          "required": false,
+          "maxLength": 1000
+        },
+        {
+          "id": "pricing_model",
+          "type": "multiselect",
+          "label": "What pricing models do you use?",
+          "required": true,
+          "options": [
+            "Monthly retainer (flat fee)",
+            "Hourly billing",
+            "Project-based (fixed price)",
+            "Performance-based / commission",
+            "Percentage of ad spend",
+            "Tiered packages",
+            "Custom pricing per client"
+          ]
+        },
+        {
+          "id": "first_payment_collection",
+          "type": "textarea",
+          "label": "After a deal closes, how do you collect the first payment, and what are typically the terms (due on receipt, net 30)?",
+          "required": true,
+          "maxLength": 1000
+        },
+        {
+          "id": "invoicing_software",
+          "type": "text",
+          "label": "What software do you use to invoice clients and collect payments?",
+          "placeholder": "e.g., Stripe, QuickBooks, FreshBooks, HoneyBook",
+          "required": true
+        },
+        {
+          "id": "payment_terms",
+          "type": "textarea",
+          "label": "What are your typical payment terms?",
+          "required": true,
+          "maxLength": 500
+        },
+        {
+          "id": "late_payment_management",
+          "type": "textarea",
+          "label": "How do you manage late payments from clients? Do you have a follow-up process? Is there someone on your team responsible for this process?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "owner_compensation_market",
+          "type": "select",
+          "label": "How would you characterize current owner compensation relative to market?",
+          "required": true,
+          "options": [
+            "Below market (reinvesting in business)",
+            "At market rate",
+            "Above market rate",
+            "Significantly above market",
+            "Prefer not to say"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "technology_tools",
+      "title": "Technology & Tools",
+      "description": "Help us understand your technology stack and systems.",
+      "questions": [
+        {
+          "id": "core_tools",
+          "type": "textarea",
+          "label": "List your core software tools and platforms.",
+          "placeholder": "Include project management, reporting, SEO tools, ad platforms, etc.",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "proprietary_technology",
+          "type": "boolean",
+          "label": "Do you have any proprietary technology, tools, or processes?",
+          "required": true
+        },
+        {
+          "id": "proprietary_details",
+          "type": "textarea",
+          "label": "Describe your proprietary technology or tools.",
+          "placeholder": "What did you build? How is it used?",
+          "required": true,
+          "maxLength": 1500,
+          "condition": {
+            "questionId": "proprietary_technology",
+            "value": true
+          }
+        },
+        {
+          "id": "technical_debt",
+          "type": "textarea",
+          "label": "Are there any technology improvements you've been putting off?",
+          "placeholder": "Outdated systems, needed migrations, technical debt?",
+          "required": false,
+          "maxLength": 1000
+        },
+        {
+          "id": "data_management",
+          "type": "select",
+          "label": "How would you rate your data management and documentation?",
+          "required": true,
+          "options": [
+            "Excellent - everything organized and documented",
+            "Good - most things are organized",
+            "Fair - some organization, some chaos",
+            "Poor - data is scattered",
+            "Very poor - would struggle to find things"
+          ]
+        },
+        {
+          "id": "client_data_access",
+          "type": "textarea",
+          "label": "How do clients access their data and reporting?",
+          "placeholder": "Custom dashboards, Google Data Studio, platform access, PDF reports, etc.",
+          "required": false,
+          "maxLength": 1000
+        }
+      ]
+    },
+    {
+      "id": "growth_transition",
+      "title": "Growth & Transition Goals",
+      "description": "Tell us about your motivations and expectations for a transition.",
+      "questions": [
+        {
+          "id": "reason_for_selling",
+          "type": "multiselect",
+          "label": "What are your primary reasons for considering a sale?",
+          "required": true,
+          "options": [
+            "Ready to retire / exit",
+            "Burnout / lifestyle change",
+            "Want to pursue other opportunities",
+            "Need capital for other ventures",
+            "Business needs resources to grow",
+            "Health reasons",
+            "Partnership issues",
+            "Market timing feels right",
+            "Received unsolicited interest",
+            "Other"
+          ]
+        },
+        {
+          "id": "ideal_outcome",
+          "type": "textarea",
+          "label": "What does your ideal outcome look like?",
+          "placeholder": "What would make this transaction successful for you?",
+          "required": true,
+          "maxLength": 1500
+        },
+        {
+          "id": "post_sale_involvement",
+          "type": "select",
+          "label": "How involved would you like to be post-transaction?",
+          "required": true,
+          "options": [
+            "Clean exit - minimal transition",
+            "Short transition (1-3 months)",
+            "Medium transition (3-6 months)",
+            "Extended transition (6-12 months)",
+            "Would consider staying on long-term",
+            "Flexible / open to discussion"
+          ]
+        },
+        {
+          "id": "transition_concerns",
+          "type": "textarea",
+          "label": "What concerns do you have about a transition?",
+          "placeholder": "Client reactions, team retention, brand changes, etc.",
+          "required": false,
+          "maxLength": 1500
+        },
+        {
+          "id": "timeline_expectations",
+          "type": "select",
+          "label": "What is your ideal timeline for completing a transaction?",
+          "required": true,
+          "options": [
+            "ASAP (1-2 months)",
+            "Near-term (3-4 months)",
+            "Standard (4-6 months)",
+            "Flexible (6+ months okay)",
+            "No rush - exploring options"
+          ]
+        },
+        {
+          "id": "growth_opportunities",
+          "type": "textarea",
+          "label": "What growth opportunities do you see for the business?",
+          "placeholder": "What would you do with more resources or a different focus?",
+          "required": false,
+          "maxLength": 1500
+        }
+      ]
+    },
+    {
+      "id": "risks_challenges",
+      "title": "Risks & Challenges",
+      "description": "Help us understand potential challenges or concerns.",
+      "questions": [
+        {
+          "id": "known_issues",
+          "type": "textarea",
+          "label": "Are there any known issues or challenges we should be aware of?",
+          "placeholder": "Be candid - better to discuss early than discover later.",
+          "required": true,
+          "maxLength": 2000
+        },
+        {
+          "id": "client_concentration_risk",
+          "type": "textarea",
+          "label": "Are any major client relationships at risk?",
+          "placeholder": "Upcoming renewals, dissatisfaction, changes at the client, etc.",
+          "required": false,
+          "maxLength": 1000
+        },
+        {
+          "id": "pending_litigation",
+          "type": "boolean",
+          "label": "Is there any pending or threatened litigation?",
+          "required": true
+        },
+        {
+          "id": "litigation_details",
+          "type": "textarea",
+          "label": "Please describe the litigation situation.",
+          "required": true,
+          "maxLength": 1500,
+          "condition": {
+            "questionId": "pending_litigation",
+            "value": true
+          }
+        },
+        {
+          "id": "employee_retention_risk",
+          "type": "select",
+          "label": "How would you rate employee retention risk in a transition?",
+          "required": true,
+          "options": [
+            "Low - team is stable and adaptable",
+            "Moderate - some may be uncertain",
+            "High - key people might leave",
+            "Uncertain",
+            "N/A - no employees"
+          ]
+        },
+        {
+          "id": "market_threats",
+          "type": "textarea",
+          "label": "What market or competitive threats concern you?",
+          "placeholder": "Industry changes, competitor moves, technology disruption, etc.",
+          "required": false,
+          "maxLength": 1500
+        },
+        {
+          "id": "anything_else",
+          "type": "textarea",
+          "label": "Is there anything else we should know?",
+          "placeholder": "Any other context that would help us understand your business better.",
+          "required": false,
+          "maxLength": 2000
+        }
+      ]
+    }
+  ]
+}

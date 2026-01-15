@@ -1,0 +1,195 @@
+Here's the updated brief with the agency survey/audit component added:
+
+---
+
+## Aragon Holdings: Deal Room Application Brief
+
+### Purpose
+
+This application is a **deal room and due diligence portal**—not a CRM. It picks up where Pipedrive leaves off, specifically when an NDA has been signed and Aragon Holdings is actively evaluating whether to move forward with a Letter of Intent.
+
+The application serves as the canonical system of record for everything that happens between NDA execution and LOI decision (and potentially through closing).
+
+---
+
+### Where This Fits in the Deal Lifecycle
+
+| Stage | System | Notes |
+|-------|--------|-------|
+| Lead sourcing & outreach | Pipedrive | Inbound, outbound, broker-sourced leads |
+| Initial conversations | Pipedrive | Qualifying calls, early screening |
+| NDA signed | **Handoff point** | Deal moves into this application |
+| Preliminary due diligence | **This app** | Information gathering, fit analysis, checklist |
+| LOI decision | **This app** | Go/no-go based on collected data |
+| LOI → Close | **This app** | Document collection, final diligence |
+
+---
+
+### Core Functions
+
+**1. Agency Survey / Audit Questionnaire**
+
+A structured questionnaire (50–60 questions) the seller completes to provide qualitative insight into how the business actually operates. This is distinct from document uploads—it captures context, nuance, and owner perspective that financials alone don't reveal.
+
+The survey should support:
+
+- **Multiple question types**: Text, multiple choice, yes/no, numeric, multi-select, scaled ratings
+- **Conditional logic**: Show/hide questions based on previous answers (e.g., "Do you have employees?" → if yes, show employee-related questions)
+- **Section grouping**: Organized by category for easier completion
+- **Save and resume**: Sellers won't finish in one sitting
+- **Progress indicator**: Show completion percentage
+- **Internal notes per question**: Space for Aragon team to annotate or flag responses
+
+Example survey sections:
+
+- **Business Overview**: Founding story, mission, service evolution, competitive positioning
+- **Ownership & Leadership**: Owner's current role, hours worked, key responsibilities, succession readiness
+- **Team & Org Structure**: Employee count, tenure, key person dependencies, contractor reliance
+- **Client Relationships**: How clients are acquired, retention drivers, relationship ownership, communication patterns
+- **Service Delivery**: Fulfillment model, SOPs, QA processes, capacity constraints
+- **Sales & Marketing**: Pipeline source, sales cycle, who sells, marketing spend
+- **Financial Context**: Seasonality, pricing model, billing terms, AR issues, major expenses
+- **Technology & Tools**: Tech stack, integrations, proprietary systems, technical debt
+- **Growth & Goals**: Why selling, ideal outcome, concerns about transition, timeline expectations
+- **Risk & Challenges**: Known issues, client concentration concerns, pending litigation, market threats
+
+The survey responses become a core input for the strategic fit assessment and LOI decision.
+
+---
+
+**2. Seller Document Uploads**
+
+The seller needs a way to upload materials directly. This includes:
+
+- Tax returns (typically 3 years)
+- P&L statements and balance sheets
+- Insurance policies (E&O, general liability, cyber)
+- Payroll and salary details
+- Client contracts
+- Vendor/contractor agreements
+- Organizational charts
+- Any other requested documents
+
+The app should support structured uploads (specific document types with labels) and unstructured uploads (additional materials the seller wants to share).
+
+---
+
+**3. Due Diligence Checklist**
+
+A configurable checklist of items Aragon needs from the seller to make an informed decision. This checklist should:
+
+- Track what's been requested, what's been received, and what's outstanding
+- Allow notes/comments per item
+- Support status flags (not requested, requested, received, reviewed, flagged)
+- Be templated but editable per deal (some agencies need different diligence based on their model)
+
+Example checklist categories:
+
+- **Financial**: Tax returns, P&Ls, AR aging, cash position
+- **Legal**: Entity docs, operating agreements, litigation history
+- **HR**: Employee list, salaries, benefits, contractor agreements
+- **Clients**: Client list, contracts, concentration breakdown, tenure
+- **Operations**: Tech stack, SOPs, vendor relationships
+- **Insurance**: Policies, claims history
+
+---
+
+**4. Competitive & Market Analysis**
+
+Space to capture research on:
+
+- The agency's competitive positioning
+- Market/niche dynamics
+- Comparable agencies or recent transactions
+- Strengths, weaknesses, opportunities, threats
+
+This may be internal notes rather than seller-uploaded content.
+
+---
+
+**5. Strategic Fit Assessment**
+
+How does this agency fit within the Aragon portfolio? Key questions:
+
+- Service line overlap or expansion?
+- Client type alignment?
+- Geographic or vertical synergies?
+- Operational integration complexity?
+- Leadership/talent retention considerations?
+
+This section helps structure the "should we do this deal" conversation beyond just the numbers.
+
+---
+
+**6. LOI Document Preparation**
+
+The app should store key deal terms that will flow into the LOI:
+
+- Purchase price (or range)
+- Deal structure (asset vs. stock, earnout, seller financing)
+- Transition terms (seller involvement post-close)
+- Key conditions or contingencies
+- Timeline
+
+This could eventually template out a draft LOI or at least provide a structured summary for legal counsel.
+
+---
+
+**7. Document Repository**
+
+A secure, organized file storage system where:
+
+- Sellers upload directly via a portal
+- Files are tagged by category and deal stage
+- Version history is maintained
+- Access can be controlled (internal team vs. seller view)
+
+---
+
+### User Roles
+
+| Role | Access |
+|------|--------|
+| Aragon team (internal) | Full access: view, edit, upload, analyze, view survey responses |
+| Seller | Limited access: complete survey, upload documents, view checklist status |
+| Advisor/Attorney (optional) | View-only or scoped access to specific sections |
+
+---
+
+### Seller Portal Experience
+
+The seller interacts with the app through a simplified portal view. Their workflow:
+
+1. **Complete the agency survey** – Primary task, required before most other steps
+2. **Upload requested documents** – Guided by the checklist
+3. **Track progress** – See what's complete, what's pending
+4. **Communicate** – Ask questions, provide clarifications (optional messaging feature)
+
+The experience should feel professional and low-friction. Sellers are often busy operators—if it feels like homework, completion rates drop.
+
+---
+
+### Design Principles
+
+- **Operator-built, not broker-built**: This is for a buyer who will run the business, not flip it
+- **Clarity over complexity**: The goal is faster, better-informed LOI decisions
+- **Seller experience matters**: If the survey is tedious or uploads are painful, quality suffers
+- **Qualitative + quantitative**: The survey captures what the documents can't
+- **Security is non-negotiable**: Tax returns, salaries, and contracts require proper access control
+
+---
+
+### Success Criteria
+
+The app is working if:
+
+1. Every deal post-NDA lives in one place with full documentation
+2. The survey gives Aragon a clear picture of how the business actually runs before deep diligence
+3. Checklist status is clear at a glance—no chasing sellers via email
+4. LOI decisions are faster and better-informed
+5. Sellers find the survey and upload process straightforward
+6. Nothing falls through the cracks between Pipedrive handoff and close
+
+---
+
+Want me to draft the actual survey questions, outline a data model, or move toward user stories and technical spec?
