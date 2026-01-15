@@ -433,38 +433,91 @@ router.get('/:dealId/sellers', requireRole(['admin', 'team_member']), async (req
   try {
     const { dealId } = req.params;
 
-    // Get active sellers with deal access
-    const { data: activeSellers, error: sellersError } = await req.supabase
+    // Get active sellers with deal access - use explicit join query
+    const { data: dealAccessRecords, error: sellersError } = await req.supabase
       .from('deal_access')
-      .select(`
-        user_id,
-        access_level,
-        granted_at,
-        profiles:user_id (id, email, full_name, role)
-      `)
+      .select('id, user_id, access_level, is_primary_contact, granted_at, granted_by')
       .eq('deal_id', dealId)
       .eq('access_level', 'seller');
 
     if (sellersError) throw sellersError;
 
+    // Fetch profile data for each seller
+    const sellers = [];
+    if (dealAccessRecords && dealAccessRecords.length > 0) {
+      const userIds = dealAccessRecords.map(da => da.user_id);
+
+      const { data: profiles, error: profilesError } = await req.supabase
+        .from('profiles')
+        .select('id, email, full_name, phone')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Map profiles to deal access records
+      const profileMap = {};
+      for (const profile of (profiles || [])) {
+        profileMap[profile.id] = profile;
+      }
+
+      for (const da of dealAccessRecords) {
+        const profile = profileMap[da.user_id];
+        if (profile) {
+          sellers.push({
+            id: da.id,
+            user_id: da.user_id,
+            email: profile.email,
+            full_name: profile.full_name,
+            phone: profile.phone,
+            is_primary_contact: da.is_primary_contact || false,
+            access_level: da.access_level,
+            granted_at: da.granted_at
+          });
+        }
+      }
+    }
+
     // Get pending seller invites for this deal
-    const { data: pendingInvites, error: invitesError } = await req.supabase
+    const { data: pendingRecords, error: invitesError } = await req.supabase
       .from('authorized_emails')
-      .select('*')
+      .select('id, email, full_name, invited_at, invited_by')
       .eq('deal_id', dealId)
       .eq('role', 'seller')
       .is('claimed_at', null);
 
     if (invitesError) throw invitesError;
 
+    // Fetch inviter names for pending invites
+    const pendingInvites = [];
+    if (pendingRecords && pendingRecords.length > 0) {
+      const inviterIds = pendingRecords.map(p => p.invited_by).filter(Boolean);
+
+      let inviterMap = {};
+      if (inviterIds.length > 0) {
+        const { data: inviters } = await req.supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', inviterIds);
+
+        for (const inviter of (inviters || [])) {
+          inviterMap[inviter.id] = inviter.full_name;
+        }
+      }
+
+      for (const invite of pendingRecords) {
+        pendingInvites.push({
+          id: invite.id,
+          email: invite.email,
+          full_name: invite.full_name,
+          invited_at: invite.invited_at,
+          invited_by_name: inviterMap[invite.invited_by] || null
+        });
+      }
+    }
+
     res.json({
-      active: activeSellers?.map(s => ({
-        id: s.profiles?.id,
-        email: s.profiles?.email,
-        full_name: s.profiles?.full_name,
-        granted_at: s.granted_at
-      })) || [],
-      pending: pendingInvites || []
+      sellers,
+      pending_invites: pendingInvites
     });
   } catch (error) {
     console.error('Error fetching sellers:', error);
