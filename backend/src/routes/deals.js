@@ -268,12 +268,21 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
 
     const normalizedEmail = email.toLowerCase();
 
+    // Get the deal info for the email
+    const { data: deal } = await req.supabase
+      .from('deals')
+      .select('agency_name')
+      .eq('id', dealId)
+      .single();
+
     // Check if user already has a profile
     const { data: existingUser } = await req.supabase
       .from('profiles')
       .select('id, role')
       .eq('email', normalizedEmail)
       .single();
+
+    let isNewInvite = false;
 
     if (existingUser) {
       // User exists - grant deal access directly
@@ -288,11 +297,7 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
 
       if (accessError) throw accessError;
 
-      res.json({
-        success: true,
-        message: `${email} has been granted access to this deal.`,
-        existingUser: true
-      });
+      isNewInvite = true; // Still send email to notify them
     } else {
       // User doesn't exist - add to authorized_emails so they get seller role on signup
       // First check if already invited
@@ -318,18 +323,34 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
           });
 
         if (inviteError) throw inviteError;
+        isNewInvite = true;
       }
-
-      // Store the deal_id association so we can grant access when they sign up
-      // For now, we'll handle this in the auth trigger or post-signup flow
-      // TODO: Add pending_deal_access table or similar mechanism
-
-      res.json({
-        success: true,
-        message: `${email} has been authorized as a seller. They will receive access when they sign up.`,
-        existingUser: false
-      });
     }
+
+    // Send invite email via n8n webhook (non-blocking)
+    if (isNewInvite && process.env.N8N_WEBHOOK_URL) {
+      fetch(process.env.N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'seller_invite',
+          to: normalizedEmail,
+          name: full_name || normalizedEmail.split('@')[0],
+          dealName: deal?.agency_name || 'your deal',
+          invitedBy: req.user.full_name || req.user.email,
+          signupUrl: process.env.FRONTEND_URL || 'https://aragon-deal-space.lovable.app',
+          isExistingUser: !!existingUser
+        })
+      }).catch(err => console.error('Failed to send invite email webhook:', err));
+    }
+
+    res.json({
+      success: true,
+      message: existingUser
+        ? `${email} has been granted access to this deal.`
+        : `${email} has been authorized as a seller. They will receive access when they sign up.`,
+      existingUser: !!existingUser
+    });
   } catch (error) {
     console.error('Error inviting seller:', error);
     res.status(500).json({ error: 'Failed to invite seller' });
