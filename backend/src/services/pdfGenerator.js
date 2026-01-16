@@ -141,64 +141,54 @@ async function generateNdaPdf(options) {
       const leftX = 72;
       const rightX = 320;
       const colWidth = 200;
-      let y = doc.y;
+      const startY = doc.y;
 
       // Party 1 (Signer/Prospect)
       doc.fontSize(10).font('Helvetica-Bold')
-        .text('PARTY 1:', leftX, y, { width: colWidth });
-      y += 20;
+        .text('PARTY 1:', leftX, startY, { width: colWidth });
 
       doc.font('Helvetica')
-        .text(party1.companyName, leftX, y, { width: colWidth });
-      y += 15;
+        .text(party1.companyName, leftX, startY + 20, { width: colWidth });
 
-      doc.text(party1.address || 'Address on file', leftX, y, { width: colWidth });
-      y += 25;
+      doc.text(party1.address || 'Address on file', leftX, startY + 35, { width: colWidth });
 
-      // Signature line
-      doc.moveTo(leftX, y).lineTo(leftX + colWidth, y).stroke();
-      y += 5;
+      // Signature line for Party 1
+      doc.moveTo(leftX, startY + 60).lineTo(leftX + colWidth, startY + 60).stroke();
       doc.font('Helvetica-Oblique').fontSize(12)
-        .text(party1.signature, leftX, y, { width: colWidth });
-      y += 15;
+        .text(party1.signature, leftX, startY + 65, { width: colWidth });
       doc.font('Helvetica').fontSize(9).fillColor('gray')
-        .text('Electronic Signature', leftX, y, { width: colWidth });
+        .text('Electronic Signature', leftX, startY + 80, { width: colWidth });
       doc.fillColor('black');
-      y += 20;
 
       doc.fontSize(10)
-        .text(`Name: ${party1.fullName}`, leftX, y, { width: colWidth });
-      y += 15;
-      doc.text(`Title: ${party1.title}`, leftX, y, { width: colWidth });
+        .text(`Name: ${party1.fullName}`, leftX, startY + 100, { width: colWidth });
+      doc.text(`Title: ${party1.title}`, leftX, startY + 115, { width: colWidth });
 
       // Party 2 (Counter-signer/Aragon Holdings)
-      y = doc.y - 95; // Reset to start of signature block
-
       doc.fontSize(10).font('Helvetica-Bold')
-        .text('PARTY 2:', rightX, y - 60, { width: colWidth });
+        .text('PARTY 2:', rightX, startY, { width: colWidth });
 
       doc.font('Helvetica')
-        .text(party2.companyName, rightX, y - 40, { width: colWidth });
+        .text(party2.companyName, rightX, startY + 20, { width: colWidth });
 
-      doc.text(party2.address, rightX, y - 25, { width: colWidth });
+      doc.text(party2.address, rightX, startY + 35, { width: colWidth });
 
-      // Signature line
-      doc.moveTo(rightX, y - 0).lineTo(rightX + colWidth, y - 0).stroke();
+      // Signature line for Party 2
+      doc.moveTo(rightX, startY + 60).lineTo(rightX + colWidth, startY + 60).stroke();
       doc.font('Helvetica-Oblique').fontSize(12)
-        .text(party2.signature, rightX, y + 5, { width: colWidth });
+        .text(party2.signature, rightX, startY + 65, { width: colWidth });
       doc.font('Helvetica').fontSize(9).fillColor('gray')
-        .text('Electronic Signature', rightX, y + 20, { width: colWidth });
+        .text('Electronic Signature', rightX, startY + 80, { width: colWidth });
       doc.fillColor('black');
 
       doc.fontSize(10)
-        .text(`Name: ${party2.fullName}`, rightX, y + 40, { width: colWidth });
-      doc.text(`Title: ${party2.title}`, rightX, y + 55, { width: colWidth });
+        .text(`Name: ${party2.fullName}`, rightX, startY + 100, { width: colWidth });
+      doc.text(`Title: ${party2.title}`, rightX, startY + 115, { width: colWidth });
 
       // Footer with timestamp and audit info
-      doc.moveDown(4);
       doc.fontSize(8).fillColor('gray')
-        .text('─'.repeat(80), { align: 'center' });
-      doc.text(`Electronically signed on ${formatDateTime(signedAt)}`, { align: 'center' });
+        .text('_'.repeat(70), leftX, startY + 150, { align: 'center' });
+      doc.text(`Electronically signed on ${formatDateTime(signedAt)}`, leftX, startY + 165, { align: 'center', width: 468 });
       doc.text(`Document ID: ${ndaId}`, { align: 'center' });
       doc.text('This document was electronically signed and is legally binding.', { align: 'center' });
 
