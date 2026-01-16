@@ -13,6 +13,7 @@ const surveyRoutes = require('./routes/survey');
 const documentsRoutes = require('./routes/documents');
 const checklistRoutes = require('./routes/checklist');
 const usersRoutes = require('./routes/users');
+const ndaRoutes = require('./routes/nda');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -57,6 +58,7 @@ app.use('/api/survey', surveyRoutes);
 app.use('/api/documents', documentsRoutes);
 app.use('/api/checklist', checklistRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/nda', ndaRoutes);
 
 // Serve survey config (public)
 app.get('/api/config/survey', (req, res) => {

@@ -84,7 +84,8 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
       .select(`
         *,
         survey_progress (*),
-        deal_access (user_id, access_level, granted_at)
+        deal_access (user_id, access_level, granted_at),
+        nda:nda_id (id, signer_company_name, signer_full_name, signer_email, signed_at, pdf_path)
       `)
       .eq('id', dealId)
       .single();
@@ -104,6 +105,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
 /**
  * POST /api/deals
  * Create a new deal (team members only)
+ * Optionally attach an NDA by providing nda_id
  */
 router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
   try {
@@ -123,11 +125,29 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
       pipedrive_deal_id,
       reported_revenue,
       reported_ebitda,
-      asking_price
+      asking_price,
+      nda_id // Optional: attach an NDA to this deal
     } = req.body;
 
     if (!agency_name) {
       return res.status(400).json({ error: 'Agency name is required' });
+    }
+
+    // If nda_id provided, verify it exists and is not already attached
+    if (nda_id) {
+      const { data: nda, error: ndaError } = await req.supabase
+        .from('ndas')
+        .select('id, deal_id, signer_company_name')
+        .eq('id', nda_id)
+        .single();
+
+      if (ndaError || !nda) {
+        return res.status(400).json({ error: 'NDA not found' });
+      }
+
+      if (nda.deal_id) {
+        return res.status(400).json({ error: 'NDA is already attached to another deal' });
+      }
     }
 
     // Create the deal using user's authenticated client
@@ -150,12 +170,26 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
         reported_revenue,
         reported_ebitda,
         asking_price,
+        nda_id: nda_id || null,
         created_by: req.user.id
       })
       .select()
       .single();
 
     if (dealError) throw dealError;
+
+    // If NDA attached, update the NDA status
+    if (nda_id) {
+      await req.supabase
+        .from('ndas')
+        .update({
+          deal_id: deal.id,
+          status: 'attached',
+          attached_at: new Date().toISOString(),
+          attached_by: req.user.id
+        })
+        .eq('id', nda_id);
+    }
 
     // Initialize survey progress
     const surveyConfig = require('../../../config/survey.json');
