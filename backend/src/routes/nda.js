@@ -180,6 +180,100 @@ router.post('/sign', async (req, res) => {
 });
 
 /**
+ * POST /api/nda/process
+ * PUBLIC endpoint - called by Supabase Edge Function after NDA is inserted
+ * Generates PDF and sends webhook to n8n
+ */
+router.post('/process', async (req, res) => {
+  try {
+    const {
+      nda_id,
+      signer_company_name,
+      signer_company_address,
+      signer_full_name,
+      signer_title,
+      signer_email,
+      signature_text,
+      signed_at,
+      effective_date
+    } = req.body;
+
+    // Validation
+    if (!nda_id || !signer_company_name || !signer_full_name || !signer_email || !signature_text) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['nda_id', 'signer_company_name', 'signer_full_name', 'signer_email', 'signature_text']
+      });
+    }
+
+    const signedAtDate = signed_at || new Date().toISOString();
+    const effectiveDateStr = effective_date || new Date().toISOString().split('T')[0];
+
+    // Generate PDF
+    let pdfPath = null;
+    try {
+      pdfPath = await generateNdaPdf({
+        ndaId: nda_id,
+        effectiveDate: effectiveDateStr,
+        party1: {
+          companyName: signer_company_name,
+          address: signer_company_address || '',
+          signature: signature_text,
+          fullName: signer_full_name,
+          title: signer_title || ''
+        },
+        party2: {
+          companyName: COMPANY_NAME,
+          address: COMPANY_ADDRESS,
+          signature: COUNTER_SIGNER_NAME,
+          fullName: COUNTER_SIGNER_NAME,
+          title: COUNTER_SIGNER_TITLE
+        },
+        signedAt: signedAtDate
+      });
+    } catch (pdfError) {
+      console.error('Error generating PDF:', pdfError);
+      return res.status(500).json({ error: 'Failed to generate PDF', details: pdfError.message });
+    }
+
+    // Send email notification via n8n webhook
+    if (process.env.N8N_WEBHOOK_URL) {
+      try {
+        await fetch(process.env.N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'nda_signed',
+            to: signer_email,
+            name: signer_full_name,
+            companyName: signer_company_name,
+            signedAt: signedAtDate,
+            effectiveDate: effectiveDateStr,
+            ndaId: nda_id,
+            pdfPath,
+            counterSignerCompany: COMPANY_NAME,
+            counterSignerName: COUNTER_SIGNER_NAME
+          })
+        });
+      } catch (webhookError) {
+        console.error('Failed to send NDA email webhook:', webhookError);
+        // Don't fail the request if webhook fails
+      }
+    }
+
+    res.json({
+      success: true,
+      pdf_path: pdfPath,
+      pdf_generated_at: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error processing NDA:', error);
+    res.status(500).json({ error: 'Failed to process NDA' });
+  }
+});
+
+/**
  * GET /api/nda/terms
  * PUBLIC endpoint - returns the NDA terms text for display
  */
