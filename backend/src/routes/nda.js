@@ -182,7 +182,7 @@ router.post('/sign', async (req, res) => {
 /**
  * POST /api/nda/process
  * PUBLIC endpoint - called by Supabase Edge Function after NDA is inserted
- * Generates PDF and sends webhook to n8n
+ * Generates PDF, uploads to Supabase Storage, and sends webhook to n8n
  */
 router.post('/process', async (req, res) => {
   try {
@@ -209,10 +209,10 @@ router.post('/process', async (req, res) => {
     const signedAtDate = signed_at || new Date().toISOString();
     const effectiveDateStr = effective_date || new Date().toISOString().split('T')[0];
 
-    // Generate PDF
-    let pdfPath = null;
+    // Generate PDF locally
+    let localPdfPath = null;
     try {
-      pdfPath = await generateNdaPdf({
+      localPdfPath = await generateNdaPdf({
         ndaId: nda_id,
         effectiveDate: effectiveDateStr,
         party1: {
@@ -236,6 +236,50 @@ router.post('/process', async (req, res) => {
       return res.status(500).json({ error: 'Failed to generate PDF', details: pdfError.message });
     }
 
+    // Read PDF as base64 and upload to Supabase Storage via edge function
+    let storagePath = null;
+    let publicUrl = null;
+
+    try {
+      const pdfBuffer = await fs.readFile(localPdfPath);
+      const pdfBase64 = pdfBuffer.toString('base64');
+      const filename = `nda-${nda_id}.pdf`;
+
+      // Call the edge function to upload to Supabase Storage
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        const uploadResponse = await fetch(`${supabaseUrl}/functions/v1/nda-upload-pdf`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({
+            nda_id,
+            pdf_base64: pdfBase64,
+            filename
+          })
+        });
+
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json();
+          storagePath = uploadResult.pdf_path;
+          publicUrl = uploadResult.public_url;
+        } else {
+          console.error('Failed to upload PDF to storage:', await uploadResponse.text());
+        }
+      }
+
+      // Clean up local file
+      await fs.unlink(localPdfPath).catch(() => {});
+
+    } catch (uploadError) {
+      console.error('Error uploading PDF to storage:', uploadError);
+      // Continue even if upload fails - we still have the local path as fallback
+    }
+
     // Send email notification via n8n webhook
     if (process.env.N8N_WEBHOOK_URL) {
       try {
@@ -250,7 +294,8 @@ router.post('/process', async (req, res) => {
             signedAt: signedAtDate,
             effectiveDate: effectiveDateStr,
             ndaId: nda_id,
-            pdfPath,
+            pdfPath: storagePath || localPdfPath,
+            pdfUrl: publicUrl,
             counterSignerCompany: COMPANY_NAME,
             counterSignerName: COUNTER_SIGNER_NAME
           })
@@ -263,7 +308,8 @@ router.post('/process', async (req, res) => {
 
     res.json({
       success: true,
-      pdf_path: pdfPath,
+      pdf_path: storagePath || localPdfPath,
+      pdf_url: publicUrl,
       pdf_generated_at: new Date().toISOString()
     });
 
