@@ -383,6 +383,7 @@ router.post('/:dealId/invite', requireRole(['admin', 'team_member']), async (req
 
     // Send invite email via n8n webhook (non-blocking)
     if (isNewInvite && process.env.N8N_WEBHOOK_URL) {
+      const frontendUrl = process.env.FRONTEND_URL || 'https://deals.aragon-holdings.com';
       fetch(process.env.N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -392,7 +393,8 @@ router.post('/:dealId/invite', requireRole(['admin', 'team_member']), async (req
           name: full_name || normalizedEmail.split('@')[0],
           dealName: deal?.agency_name || 'your deal',
           invitedBy: req.user.full_name || req.user.email,
-          signupUrl: process.env.FRONTEND_URL || 'https://aragon-deal-space.lovable.app',
+          signupUrl: frontendUrl,
+          signupLink: `${frontendUrl}/signup?email=${encodeURIComponent(normalizedEmail)}`,
           isExistingUser: !!existingUser,
           accessLevel: access_level
         })
@@ -485,6 +487,7 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
     }
 
     if (isNewInvite && process.env.N8N_WEBHOOK_URL) {
+      const frontendUrl = process.env.FRONTEND_URL || 'https://deals.aragon-holdings.com';
       fetch(process.env.N8N_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -494,7 +497,8 @@ router.post('/:dealId/invite-seller', requireRole(['admin', 'team_member']), asy
           name: full_name || normalizedEmail.split('@')[0],
           dealName: deal?.agency_name || 'your deal',
           invitedBy: req.user.full_name || req.user.email,
-          signupUrl: process.env.FRONTEND_URL || 'https://aragon-deal-space.lovable.app',
+          signupUrl: frontendUrl,
+          signupLink: `${frontendUrl}/signup?email=${encodeURIComponent(normalizedEmail)}`,
           isExistingUser: !!existingUser
         })
       }).catch(err => console.error('Failed to send invite email webhook:', err));
