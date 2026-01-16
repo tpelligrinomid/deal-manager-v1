@@ -368,7 +368,7 @@ router.get('/terms', async (req, res) => {
         },
         {
           number: 10,
-          content: 'This Agreement shall be governed by and construed in accordance with the laws of the State of Texas without reference to conflict of laws principles. Any disputes under this Agreement shall be brought in the state courts and the Federal courts located in Travis County, Texas, and the parties irrevocably submit to the jurisdiction and venue of these courts.'
+          content: 'This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware without reference to conflict of laws principles. Any disputes under this Agreement shall be brought in the state courts and the Federal courts located in New Castle County, Delaware, and the parties irrevocably submit to the jurisdiction and venue of these courts.'
         },
         {
           number: 11,

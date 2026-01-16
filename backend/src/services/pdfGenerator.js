@@ -113,7 +113,7 @@ async function generateNdaPdf(options) {
       // Section 10
       doc.font('Helvetica-Bold').text('10. ', { continued: true })
         .font('Helvetica')
-        .text('This Agreement shall be governed by the laws of the State of Texas. Disputes shall be brought in Travis County, Texas.');
+        .text('This Agreement shall be governed by the laws of the State of Delaware. Disputes shall be brought in New Castle County, Delaware.');
 
       doc.moveDown(0.5);
 
