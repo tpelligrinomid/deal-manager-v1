@@ -266,7 +266,7 @@ router.post('/process', async (req, res) => {
         if (uploadResponse.ok) {
           const uploadResult = await uploadResponse.json();
           storagePath = uploadResult.pdf_path;
-          publicUrl = uploadResult.public_url;
+          publicUrl = uploadResult.signed_url;
         } else {
           console.error('Failed to upload PDF to storage:', await uploadResponse.text());
         }
