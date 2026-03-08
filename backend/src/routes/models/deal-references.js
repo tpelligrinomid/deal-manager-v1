@@ -66,80 +66,58 @@ router.get('/:refId', requireModelAccess('viewer'), async (req, res) => {
 
 /**
  * POST /api/models/:modelId/deal-references
- * Add a deal to the model — auto-creates SPV entity
+ * Link a deal to an existing entity. Entity must be created separately first.
  */
 router.post('/', requireModelAccess('editor'), async (req, res) => {
   try {
-    const { deal_id, close_date, pull_reported_revenue, pull_reported_ebitda, pull_asking_price, notes } = req.body;
+    const {
+      deal_id, entity_id, close_date, close_period_index,
+      pull_reported_revenue, pull_reported_ebitda, pull_asking_price, notes
+    } = req.body;
 
-    if (!deal_id || !close_date) {
-      return res.status(400).json({ error: 'deal_id and close_date are required' });
+    if (!deal_id || !entity_id) {
+      return res.status(400).json({ error: 'deal_id and entity_id are required' });
     }
 
-    // Get model for start_date and period_count
-    const { data: model, error: modelError } = await req.supabase
-      .from('financial_models')
-      .select('start_date, period_count')
-      .eq('id', req.params.modelId)
-      .single();
+    // Determine close_period_index
+    let finalClosePeriodIndex = close_period_index;
+    if (finalClosePeriodIndex == null && close_date) {
+      const { data: model, error: modelError } = await req.supabase
+        .from('financial_models')
+        .select('start_date, period_count')
+        .eq('id', req.params.modelId)
+        .single();
 
-    if (modelError || !model) {
-      return res.status(404).json({ error: 'Model not found' });
+      if (modelError || !model) {
+        return res.status(404).json({ error: 'Model not found' });
+      }
+
+      finalClosePeriodIndex = calculateClosePeriodIndex(model.start_date, close_date);
+      if (finalClosePeriodIndex < 0 || finalClosePeriodIndex >= model.period_count) {
+        return res.status(400).json({ error: `close_date must fall within model period range` });
+      }
     }
 
-    const closePeriodIndex = calculateClosePeriodIndex(model.start_date, close_date);
-    if (closePeriodIndex < 0 || closePeriodIndex >= model.period_count) {
-      return res.status(400).json({ error: `close_date must fall within model period range (0 to ${model.period_count - 1})` });
-    }
-
-    // Get deal name for SPV entity
-    const { data: deal, error: dealError } = await req.supabase
-      .from('deals')
-      .select('agency_name')
-      .eq('id', deal_id)
-      .single();
-
-    if (dealError || !deal) {
-      return res.status(404).json({ error: 'Deal not found' });
-    }
-
-    // Get intermediate_holdco entity to use as parent
-    const { data: ihc, error: ihcError } = await req.supabase
+    // Verify entity belongs to this model
+    const { data: entity, error: entErr } = await req.supabase
       .from('model_entities')
       .select('id')
+      .eq('id', entity_id)
       .eq('model_id', req.params.modelId)
-      .eq('entity_type', 'intermediate_holdco')
       .single();
 
-    if (ihcError || !ihc) {
-      return res.status(400).json({ error: 'Model missing intermediate_holdco entity' });
+    if (entErr || !entity) {
+      return res.status(404).json({ error: 'Entity not found in this model' });
     }
 
-    // Create SPV entity
-    const { data: spvEntity, error: spvError } = await req.supabase
-      .from('model_entities')
-      .insert({
-        model_id: req.params.modelId,
-        entity_type: 'spv',
-        entity_name: deal.agency_name,
-        parent_entity_id: ihc.id,
-        close_period_index: closePeriodIndex,
-        sort_order: closePeriodIndex
-      })
-      .select()
-      .single();
-
-    if (spvError) throw spvError;
-
-    // Create deal reference
     const { data: ref, error: refError } = await req.supabase
       .from('model_deal_references')
       .insert({
         model_id: req.params.modelId,
         deal_id,
-        entity_id: spvEntity.id,
-        close_date,
-        close_period_index: closePeriodIndex,
+        entity_id,
+        close_date: close_date || null,
+        close_period_index: finalClosePeriodIndex != null ? finalClosePeriodIndex : null,
         pull_reported_revenue: pull_reported_revenue !== undefined ? pull_reported_revenue : true,
         pull_reported_ebitda: pull_reported_ebitda !== undefined ? pull_reported_ebitda : true,
         pull_asking_price: pull_asking_price !== undefined ? pull_asking_price : true,
@@ -152,12 +130,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       `)
       .single();
 
-    if (refError) {
-      // Clean up SPV entity on failure
-      await req.supabase.from('model_entities').delete().eq('id', spvEntity.id);
-      throw refError;
-    }
-
+    if (refError) throw refError;
     res.status(201).json(ref);
   } catch (error) {
     console.error('Error creating deal reference:', error);
@@ -233,38 +206,17 @@ router.patch('/:refId', requireModelAccess('editor'), async (req, res) => {
 
 /**
  * DELETE /api/models/:modelId/deal-references/:refId
- * Remove deal reference and its SPV entity
+ * Remove deal reference. Entity is NOT deleted (managed separately).
  */
 router.delete('/:refId', requireModelAccess('owner'), async (req, res) => {
   try {
-    // Get entity_id before deleting
-    const { data: ref, error: fetchError } = await req.supabase
+    const { error } = await req.supabase
       .from('model_deal_references')
-      .select('entity_id')
+      .delete()
       .eq('id', req.params.refId)
-      .eq('model_id', req.params.modelId)
-      .single();
+      .eq('model_id', req.params.modelId);
 
-    if (fetchError || !ref) {
-      return res.status(404).json({ error: 'Deal reference not found' });
-    }
-
-    // Delete deal reference (cascade cleans up scenario terms)
-    const { error: deleteError } = await req.supabase
-      .from('model_deal_references')
-      .delete()
-      .eq('id', req.params.refId);
-
-    if (deleteError) throw deleteError;
-
-    // Delete the SPV entity (cascade cleans up line items, drivers, etc.)
-    const { error: entityError } = await req.supabase
-      .from('model_entities')
-      .delete()
-      .eq('id', ref.entity_id);
-
-    if (entityError) throw entityError;
-
+    if (error) throw error;
     res.json({ success: true });
   } catch (error) {
     console.error('Error deleting deal reference:', error);
