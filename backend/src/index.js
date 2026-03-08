@@ -19,6 +19,9 @@ const modelsRoutes = require('./routes/models');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy (Render runs behind a reverse proxy)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
