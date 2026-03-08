@@ -176,9 +176,9 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
 
       // 4. Create 3 operating scenarios
       const osRows = [
-        { model_id: model.id, name: 'Downside', case_type: 'downside' },
+        { model_id: model.id, name: 'Downside', case_type: 'downside', is_default: false },
         { model_id: model.id, name: 'Base', case_type: 'base', is_default: true },
-        { model_id: model.id, name: 'Upside', case_type: 'upside' }
+        { model_id: model.id, name: 'Upside', case_type: 'upside', is_default: false }
       ];
 
       const { data: operatingScenarios, error: osError } = await req.supabase
