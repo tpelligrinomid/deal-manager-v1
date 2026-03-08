@@ -3,7 +3,6 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { requireModelAccess } = require('../../middleware/modelAuth');
-const { supabaseAdmin } = require('../../lib/supabase');
 const { generatePeriods, computeLiquidityEvent } = require('../../lib/modelEngine');
 
 // ─── CRUD ──────────────────────────────────────────────────────────

@@ -4,7 +4,6 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router({ mergeParams: true });
 const { requireModelAccess } = require('../../middleware/modelAuth');
-const { supabaseAdmin } = require('../../lib/supabase');
 const { calculateModel } = require('../../lib/modelEngine');
 
 /**
@@ -237,7 +236,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
         const CHUNK_SIZE = 100;
         for (let i = 0; i < allLineItemIds.length; i += CHUNK_SIZE) {
           const chunk = allLineItemIds.slice(i, i + CHUNK_SIZE);
-          const { error: delErr } = await supabaseAdmin
+          const { error: delErr } = await req.supabase
             .from('model_values')
             .delete()
             .in('line_item_id', chunk)
@@ -270,7 +269,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       const INSERT_CHUNK = 5000;
       for (let i = 0; i < insertRows.length; i += INSERT_CHUNK) {
         const chunk = insertRows.slice(i, i + INSERT_CHUNK);
-        const { error: insErr } = await supabaseAdmin
+        const { error: insErr } = await req.supabase
           .from('model_values')
           .insert(chunk);
 
@@ -281,7 +280,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       // 8b. Write debt corkscrews
       if (run.debtSchedules && run.debtSchedules.length > 0) {
         // Delete existing corkscrews for this scenario
-        const { error: delCorkErr } = await supabaseAdmin
+        const { error: delCorkErr } = await req.supabase
           .from('model_debt_corkscrews')
           .delete()
           .eq('model_id', modelId)
@@ -315,7 +314,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < corkRows.length; i += INSERT_CHUNK) {
           const chunk = corkRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin
+          const { error: insErr } = await req.supabase
             .from('model_debt_corkscrews')
             .insert(chunk);
 
@@ -328,7 +327,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       if (run.entityBSResults && run.entityBSResults.length > 0) {
         // Delete existing BS values for this scenario combo
         const entityIds = run.entityBSResults.map(e => e.entityId);
-        const { error: delBsErr } = await supabaseAdmin
+        const { error: delBsErr } = await req.supabase
           .from('model_balance_sheet_values')
           .delete()
           .eq('model_id', modelId)
@@ -373,7 +372,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < bsRows.length; i += INSERT_CHUNK) {
           const chunk = bsRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin
+          const { error: insErr } = await req.supabase
             .from('model_balance_sheet_values')
             .insert(chunk);
 
@@ -385,7 +384,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       // 8d. Write cash flow values
       if (run.entityCFResults && run.entityCFResults.length > 0) {
         const entityIds = run.entityCFResults.map(e => e.entityId);
-        const { error: delCfErr } = await supabaseAdmin
+        const { error: delCfErr } = await req.supabase
           .from('model_cf_values')
           .delete()
           .eq('model_id', modelId)
@@ -432,7 +431,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < cfRows.length; i += INSERT_CHUNK) {
           const chunk = cfRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin
+          const { error: insErr } = await req.supabase
             .from('model_cf_values')
             .insert(chunk);
 
@@ -457,7 +456,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
 
     // 10. Insert audit row
     const duration = Date.now() - startTime;
-    const { error: auditErr } = await supabaseAdmin
+    const { error: auditErr } = await req.supabase
       .from('model_calculate_runs')
       .insert({
         model_id: modelId,
@@ -521,7 +520,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
     console.error('Calculate error:', error);
 
     try {
-      await supabaseAdmin
+      await req.supabase
         .from('model_calculate_runs')
         .insert({
           model_id: modelId,

@@ -4,7 +4,6 @@ const express = require('express');
 const crypto = require('crypto');
 const router = express.Router({ mergeParams: true });
 const { requireModelAccess } = require('../../middleware/modelAuth');
-const { supabaseAdmin } = require('../../lib/supabase');
 const {
   calculateModel,
   generatePeriods,
@@ -378,13 +377,13 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
     // ── 10. Write to model_published_versions ──────────────────────
     // Set all existing versions to non-current
-    await supabaseAdmin
+    await req.supabase
       .from('model_published_versions')
       .update({ is_current: false })
       .eq('model_id', modelId);
 
     // Determine next version number
-    const { data: maxRow } = await supabaseAdmin
+    const { data: maxRow } = await req.supabase
       .from('model_published_versions')
       .select('version_number')
       .eq('model_id', modelId)
@@ -419,7 +418,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
       consolidatedCF: featuredRun.consolidatedCF || null
     };
 
-    const { data: published, error: pubErr } = await supabaseAdmin
+    const { data: published, error: pubErr } = await req.supabase
       .from('model_published_versions')
       .insert({
         model_id: modelId,
@@ -459,7 +458,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
         const CHUNK_SIZE = 100;
         for (let i = 0; i < allLineItemIds.length; i += CHUNK_SIZE) {
           const chunk = allLineItemIds.slice(i, i + CHUNK_SIZE);
-          await supabaseAdmin
+          await req.supabase
             .from('model_values')
             .delete()
             .in('line_item_id', chunk)
@@ -489,13 +488,13 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
       for (let i = 0; i < insertRows.length; i += INSERT_CHUNK) {
         const chunk = insertRows.slice(i, i + INSERT_CHUNK);
-        const { error: insErr } = await supabaseAdmin.from('model_values').insert(chunk);
+        const { error: insErr } = await req.supabase.from('model_values').insert(chunk);
         if (insErr) throw insErr;
       }
 
       // Debt corkscrews
       if (run.debtSchedules && run.debtSchedules.length > 0) {
-        await supabaseAdmin
+        await req.supabase
           .from('model_debt_corkscrews')
           .delete()
           .eq('model_id', modelId)
@@ -527,7 +526,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < corkRows.length; i += INSERT_CHUNK) {
           const chunk = corkRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin.from('model_debt_corkscrews').insert(chunk);
+          const { error: insErr } = await req.supabase.from('model_debt_corkscrews').insert(chunk);
           if (insErr) throw insErr;
         }
       }
@@ -535,7 +534,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
       // Balance sheet values
       if (run.entityBSResults && run.entityBSResults.length > 0) {
         const bsEntityIds = run.entityBSResults.map(e => e.entityId);
-        await supabaseAdmin
+        await req.supabase
           .from('model_balance_sheet_values')
           .delete()
           .eq('model_id', modelId)
@@ -578,7 +577,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < bsRows.length; i += INSERT_CHUNK) {
           const chunk = bsRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin.from('model_balance_sheet_values').insert(chunk);
+          const { error: insErr } = await req.supabase.from('model_balance_sheet_values').insert(chunk);
           if (insErr) throw insErr;
         }
       }
@@ -586,7 +585,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
       // Cash flow values
       if (run.entityCFResults && run.entityCFResults.length > 0) {
         const cfEntityIds = run.entityCFResults.map(e => e.entityId);
-        await supabaseAdmin
+        await req.supabase
           .from('model_cf_values')
           .delete()
           .eq('model_id', modelId)
@@ -631,7 +630,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
         for (let i = 0; i < cfRows.length; i += INSERT_CHUNK) {
           const chunk = cfRows.slice(i, i + INSERT_CHUNK);
-          const { error: insErr } = await supabaseAdmin.from('model_cf_values').insert(chunk);
+          const { error: insErr } = await req.supabase.from('model_cf_values').insert(chunk);
           if (insErr) throw insErr;
         }
       }
@@ -639,7 +638,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
     // ── 12. Audit row ──────────────────────────────────────────────
     const duration = Date.now() - startTime;
-    await supabaseAdmin
+    await req.supabase
       .from('model_calculate_runs')
       .insert({
         model_id: modelId,
@@ -656,7 +655,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
 
     // ── 13. Notify investors ───────────────────────────────────────
     if (notifyInvestors && process.env.N8N_WEBHOOK_URL) {
-      const { data: viewers } = await supabaseAdmin
+      const { data: viewers } = await req.supabase
         .from('model_access')
         .select('profiles:profile_id (email, full_name)')
         .eq('model_id', modelId)
@@ -754,7 +753,7 @@ router.delete('/:versionId', requireModelAccess('owner'), async (req, res) => {
     }
 
     // Delete the version
-    const { error: delErr } = await supabaseAdmin
+    const { error: delErr } = await req.supabase
       .from('model_published_versions')
       .delete()
       .eq('id', versionId);
@@ -763,7 +762,7 @@ router.delete('/:versionId', requireModelAccess('owner'), async (req, res) => {
 
     // If we deleted the current version, promote the next most recent
     if (target.is_current) {
-      const { data: nextVersion } = await supabaseAdmin
+      const { data: nextVersion } = await req.supabase
         .from('model_published_versions')
         .select('id')
         .eq('model_id', modelId)
@@ -772,7 +771,7 @@ router.delete('/:versionId', requireModelAccess('owner'), async (req, res) => {
         .single();
 
       if (nextVersion) {
-        await supabaseAdmin
+        await req.supabase
           .from('model_published_versions')
           .update({ is_current: true })
           .eq('id', nextVersion.id);

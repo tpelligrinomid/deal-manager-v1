@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, requireRole } = require('../middleware/auth');
 const { requireModelAccess } = require('../middleware/modelAuth');
-const { supabaseAdmin } = require('../lib/supabase');
+// NOTE: No supabaseAdmin — all ops use req.supabase (user JWT). See migration 008.
 
 // Sub-routers
 const baselineRouter = require('./models/baseline');
@@ -147,16 +147,7 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
     if (modelError) throw modelError;
 
     try {
-      // 1. Bootstrap model_access with supabaseAdmin (avoids RLS chicken-and-egg)
-      const { error: accessError } = await supabaseAdmin
-        .from('model_access')
-        .insert({
-          model_id: model.id,
-          profile_id: req.user.id,
-          role: 'owner'
-        });
-
-      if (accessError) throw accessError;
+      // 1. model_access owner row is auto-created by DB trigger (trg_auto_grant_model_owner)
 
       // 2. Get active baseline for mid_holdco link
       const { data: activeBaseline } = await req.supabase
@@ -238,7 +229,7 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
     } catch (childError) {
       // If any child insert fails, delete the model (CASCADE cleans up)
       console.error('Error creating model children, rolling back:', childError);
-      await supabaseAdmin.from('financial_models').delete().eq('id', model.id);
+      await req.supabase.from('financial_models').delete().eq('id', model.id);
       throw childError;
     }
   } catch (error) {
