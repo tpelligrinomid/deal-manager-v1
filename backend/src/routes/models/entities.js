@@ -62,18 +62,33 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       return res.status(400).json({ error: `entity_type must be one of: ${allowedTypes.join(', ')}` });
     }
 
+    // Auto-set parent_entity_id: SPVs and targets are siblings under Intermediate HoldCo
+    let parentEntityId = req.body.parent_entity_id || null;
+    if (!parentEntityId && ['spv', 'target'].includes(entity_type)) {
+      const { data: intHoldco } = await req.supabase
+        .from('model_entities')
+        .select('id')
+        .eq('model_id', req.params.modelId)
+        .eq('entity_type', 'intermediate_holdco')
+        .single();
+
+      if (intHoldco) parentEntityId = intHoldco.id;
+    }
+
     // Determine sort_order if not provided
+    // SPVs/targets start at 3 (after aragon=0, intermediate_holdco=1, mid_holdco=2)
     let nextSort = sort_order;
     if (nextSort == null) {
-      const { data: existing } = await req.supabase
+      const { data: siblings } = await req.supabase
         .from('model_entities')
         .select('sort_order')
         .eq('model_id', req.params.modelId)
+        .in('entity_type', ['spv', 'target', 'mid_holdco'])
         .order('sort_order', { ascending: false })
         .limit(1)
         .single();
 
-      nextSort = (existing?.sort_order || 0) + 1;
+      nextSort = Math.max((siblings?.sort_order || 2) + 1, 3);
     }
 
     const { data: entity, error } = await req.supabase
@@ -82,6 +97,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
         model_id: req.params.modelId,
         entity_type,
         entity_name,
+        parent_entity_id: parentEntityId,
         close_period_index: close_period_index != null ? close_period_index : null,
         sort_order: nextSort
       })

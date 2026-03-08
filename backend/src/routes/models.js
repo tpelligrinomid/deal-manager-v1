@@ -156,23 +156,44 @@ router.post('/', requireRole(['admin', 'team_member']), async (req, res) => {
         .eq('is_active', true)
         .single();
 
-      // 3. Create 4 singleton entities
-      const entityRows = [
-        { model_id: model.id, entity_type: 'aragon', entity_name: 'Aragon Holdings', sort_order: 0 },
-        {
-          model_id: model.id, entity_type: 'mid_holdco', entity_name: 'MiD Holdings',
-          baseline_id: activeBaseline?.id || null, sort_order: 1
-        },
-        { model_id: model.id, entity_type: 'intermediate_holdco', entity_name: 'Intermediate HoldCo', sort_order: 2 },
-        { model_id: model.id, entity_type: 'consolidated', entity_name: 'Consolidated', sort_order: 3 }
-      ];
+      // 3. Create singleton entities with hierarchy:
+      //    Aragon Holdings (0)
+      //      └─ Intermediate HoldCo (1)
+      //           ├─ MiD Holdings (2) — sibling to SPVs
+      //           └─ SPVs added later (3+)
+      //    Consolidated (99) — read-only roll-up
 
-      const { data: entities, error: entError } = await req.supabase
+      // Step 1: Create Aragon + Intermediate HoldCo + Consolidated (no parent deps)
+      const { data: topEntities, error: topErr } = await req.supabase
         .from('model_entities')
-        .insert(entityRows)
+        .insert([
+          { model_id: model.id, entity_type: 'aragon', entity_name: 'Aragon Holdings', sort_order: 0 },
+          { model_id: model.id, entity_type: 'intermediate_holdco', entity_name: 'Intermediate HoldCo', sort_order: 1 },
+          { model_id: model.id, entity_type: 'consolidated', entity_name: 'Consolidated', sort_order: 99 }
+        ])
         .select();
 
-      if (entError) throw entError;
+      if (topErr) throw topErr;
+
+      const intHoldco = topEntities.find(e => e.entity_type === 'intermediate_holdco');
+
+      // Step 2: Create MiD Holdings under Intermediate HoldCo
+      const { data: midEntity, error: midErr } = await req.supabase
+        .from('model_entities')
+        .insert({
+          model_id: model.id,
+          entity_type: 'mid_holdco',
+          entity_name: 'Marketers in Demand',
+          parent_entity_id: intHoldco.id,
+          baseline_id: activeBaseline?.id || null,
+          sort_order: 2
+        })
+        .select()
+        .single();
+
+      if (midErr) throw midErr;
+
+      const entities = [...topEntities, midEntity];
 
       // 4. Create 3 operating scenarios
       const osRows = [
