@@ -4,7 +4,12 @@ This document explains how the Non-Disclosure Agreement (NDA) system works in De
 
 ## Overview
 
-The NDA is the gateway to creating deals. Prospects sign an NDA on a public page before any confidential information is exchanged. Once signed, the team can attach the NDA to a deal.
+The NDA is the gateway to creating deals. NDAs can come from two sources:
+
+1. **Digital NDAs** - Prospects sign electronically on the public NDA page
+2. **External NDAs** - Already-signed NDAs uploaded by the team (for NDAs signed outside the platform)
+
+Once an NDA exists (either type), the team can attach it to a deal.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -97,6 +102,55 @@ Response:
 
 ---
 
+## External NDAs (Uploaded)
+
+For NDAs signed outside the platform (e.g., paper NDAs, DocuSign, etc.), team members can upload the signed PDF.
+
+### Upload External NDA
+```javascript
+POST /api/nda/upload-external (team members only)
+Content-Type: multipart/form-data
+
+Form fields:
+- file: PDF file (required)
+- signer_company_name: "Acme Marketing Agency" (required)
+- signer_full_name: "John Smith" (required)
+- signer_email: "john@acme.com" (required)
+- signer_company_address: "123 Main St..." (optional)
+- signer_title: "CEO" (optional)
+- signer_phone: "512-555-1234" (optional)
+- signed_at: "2026-01-10T00:00:00Z" (optional, defaults to now)
+- effective_date: "2026-01-10" (optional)
+- notes: "Signed at in-person meeting" (optional)
+
+Response:
+{
+  "success": true,
+  "message": "External NDA uploaded successfully",
+  "nda": {
+    "id": "uuid",
+    "source": "external",
+    "signer_company_name": "Acme Marketing Agency",
+    "signed_at": "2026-01-10T...",
+    "status": "signed"
+  }
+}
+```
+
+### Key Differences: Digital vs External
+
+| Aspect | Digital | External |
+|--------|---------|----------|
+| Source | Public signing page | Team upload |
+| Signature capture | Typed e-signature | Already on PDF |
+| IP/User agent | Captured | Not applicable |
+| Counter-signature | Auto-generated | Already on PDF |
+| PDF | System-generated | Uploaded as-is |
+
+Both types can be attached to deals identically after creation.
+
+---
+
 ## Team Dashboard (Authenticated)
 
 ### List All NDAs
@@ -104,6 +158,7 @@ Response:
 GET /api/nda
 Query params:
   - status: 'signed' | 'attached' | 'voided'
+  - source: 'digital' | 'external'
   - attached: 'true' | 'false' (filter by attachment status)
   - search: search by company name, email, or signer name
   - limit: default 50
@@ -127,7 +182,8 @@ Response: [
     "signer_company_name": "Acme Marketing",
     "signer_full_name": "John Smith",
     "signer_email": "john@acme.com",
-    "signed_at": "2026-01-15T..."
+    "signed_at": "2026-01-15T...",
+    "source": "digital"  // or "external"
   }
 ]
 ```
@@ -231,22 +287,24 @@ Your n8n workflow should:
 ### ndas table
 ```sql
 id UUID PRIMARY KEY
+-- Source type
+source TEXT NOT NULL DEFAULT 'digital' CHECK (source IN ('digital', 'external'))
 -- Signer info
 signer_company_name TEXT NOT NULL
 signer_company_address TEXT
 signer_full_name TEXT NOT NULL
-signer_title TEXT NOT NULL
+signer_title TEXT                      -- nullable for external
 signer_email TEXT NOT NULL
 signer_phone TEXT
--- Signature
-signature_text TEXT NOT NULL
+-- Signature (digital only)
+signature_text TEXT                    -- nullable for external
 signed_at TIMESTAMPTZ NOT NULL
 signer_ip_address TEXT
 signer_user_agent TEXT
--- Counter-signature
-counter_signer_name TEXT NOT NULL
-counter_signer_title TEXT NOT NULL
-counter_signed_at TIMESTAMPTZ NOT NULL
+-- Counter-signature (digital only)
+counter_signer_name TEXT               -- nullable for external
+counter_signer_title TEXT              -- nullable for external
+counter_signed_at TIMESTAMPTZ          -- nullable for external
 -- PDF
 pdf_path TEXT
 pdf_generated_at TIMESTAMPTZ
@@ -254,6 +312,8 @@ pdf_generated_at TIMESTAMPTZ
 deal_id UUID REFERENCES deals(id)
 attached_at TIMESTAMPTZ
 attached_by UUID REFERENCES profiles(id)
+-- Upload tracking (external only)
+uploaded_by UUID REFERENCES profiles(id)
 -- Meta
 effective_date DATE NOT NULL
 status TEXT CHECK (status IN ('signed', 'attached', 'voided'))

@@ -1,0 +1,78 @@
+Here's your **Financial Modeling Module — User Test Script**:
+
+---
+
+### **Pre-requisite**
+Log in as Tristan (admin) → navigate to `/models`
+
+---
+
+### **1. Create a Model**
+- Click "New Model" → fill in name, start date, period type (monthly), period count (e.g., 60)
+- ✅ Model appears in list → click to open ModelBuilder
+
+### **2. Entity & Timeline Setup**
+- Add a HoldCo entity and 1–2 target entities via the Acquisition Timeline
+- Set close dates for targets
+- ✅ Entities appear in the entity selector; grayed-out pre-close periods in the grid
+
+### **3. Add a Deal Reference**
+- Click "Add Deal" → link an existing deal to a target entity
+- Set close period, toggle pull flags (revenue/EBITDA/asking price)
+- ✅ Deal data seeds into the Sources & Uses panel
+
+### **4. Configure Scenarios**
+- Create a base-case capital scenario (facility size, rate, term)
+- Add an operating scenario (e.g., "Downside")
+- ✅ Scenario selectors in the header update; grid reflects selected combo
+
+### **5. Line Items & Drivers**
+- Open P&L tab → add revenue/expense line items for a target entity
+- Open Drivers panel → add revenue_growth, gross_margin drivers with period ranges
+- ✅ Values populate across periods in the spreadsheet grid
+
+### **6. Deal Structure (Sources & Uses)**
+- Open the Deal Structure panel for a target
+- Set purchase price, seller note terms, earnout terms
+- ✅ S&U table balances (Total Sources = Total Uses)
+
+### **7. Covenant Compliance**
+- Open Covenant Dashboard → add a DSCR covenant (e.g., min 1.25x)
+- ✅ Compliance indicators show per-period pass/fail
+
+### **8. Financial Statements**
+- Switch between P&L / BS / CF / Waterfall tabs
+- Toggle granularity: Monthly → Quarterly → Annual
+- ✅ Numbers aggregate correctly; BS shows "Balanced ✓"; CF shows "Ties to BS ✓"
+
+### **9. Snapshots**
+- Click "Snapshot" → select type (IC Memo), name it, save
+- ✅ Snapshot appears in the list with correct data capture
+
+### **10. Liquidity Event**
+- Click "Exit" → configure exit multiples (bear/base/bull), trailing periods
+- ✅ Waterfall preview shows IRR, MOIC, seller proceeds
+
+### **11. Publish**
+- Click "Publish" → enter version name & notes → publish
+- ✅ Status bar shows "Published version up to date"
+- Change a driver value → ✅ Status bar shows "Stale — republish recommended"
+
+### **12. Share & Investor View**
+- Click "Share" → grant access to another user's email → copy link
+- Log in as that user → open the link
+- ✅ Read-only InvestorView loads with KPIs and tabbed statements
+
+### **13. Version Compare**
+- Publish a second version after changes
+- Click "Compare" → select v1 vs v2
+- ✅ Metric deltas display with color-coded trend arrows
+
+---
+
+### **Edge Cases to Probe**
+- Create a model with 0 entities → try publishing (should show empty state)
+- Grant access to a non-existent email → expect "No user found" error
+- Rapidly toggle granularity while data loads → no crashes
+
+Here's your full 13-step user test script covering the entire financial modeling lifecycle from model creation through version comparison. Work through it sequentially — each step builds on the prior one.

@@ -1,0 +1,56 @@
+Good — Claude Code has read the spec carefully and the only genuine ambiguity is the recap question. The others just need a confirming answer. Here's exactly what to send back:
+
+---
+
+**Question 1 — Recap mutability: answer is (b).**
+
+Recap is a projection overlay only. It never mutates stored corkscrews or any output table. The behavior is:
+
+The liquidity event route loads current model state from the already-persisted output tables. For a recap event, it forks the debt corkscrew state in memory at `recap_period_index`, applies the new facility terms to that forked copy for the remaining periods, computes the dividend waterfall, and returns the full projected post-recap trajectory in the response. Nothing is written. The stored output tables are untouched.
+
+The language in Section 20.5 ("new facility balance replaces old facility balance from recap_period_index onward") describes what happens inside the in-memory fork — not a write to the database. That section needs a clarifying note added but the intent is (b).
+
+If you want to model what happens after a recap — new debt terms, new amortization, continued operations — you create a new model with a start date at the recap period and the new facility terms. The recap is a terminal read on the current model, not a mutation of it.
+
+---
+
+**Item A — DELETE + batch INSERT: yes, preferred over upsert.**
+
+DELETE WHERE model_id = X and scenario combination, then batch INSERT the fresh rows. Cleaner than ON CONFLICT for large row counts because it avoids the index lookup overhead on every row. Batch size of 5,000 rows per insert call to stay within Supabase request limits. Wrap the DELETE + INSERT in a transaction so a failed write doesn't leave partial results.
+
+---
+
+**Item B — scenario_id on line items: your understanding is correct.**
+
+`model_line_items.scenario_id = NULL` means the line exists in all deal structure scenarios — revenue lines, most expense lines. A specific `scenario_id` means the line only exists in that scenario — debt service lines, seller note interest lines, earnout lines that only appear in certain structures. The route handler filters `WHERE scenario_id IS NULL OR scenario_id = :currentScenarioId` before passing line items to the engine. `model_values` always has a concrete scenario_id because output is always scenario-specific. Proceed with that implementation.
+
+---
+
+**Item C — RLS and org_id: single-tenant for now, no org_id needed.**
+
+The existing app is single-tenant — one Aragon Holdings organization, multiple users within it. Do not add org_id to `financial_models`. Use the `model_access` table (already specced in Section 28.8) as the access control layer, same pattern as the existing `deal_access` table. RLS policies on `financial_models` and all child tables should mirror exactly how `deals` and `deal_access` are implemented in the existing schema. If you need a reference, look at the existing RLS policies on the `deals` table and replicate the pattern.
+
+Multi-tenancy (multiple organizations) is a future concern if this ever becomes a SaaS product. Not now.
+
+---
+
+**Item D — Engine modularity: confirmed, proceed.**
+
+The pipeline structure from Section 28.4 is the canonical implementation. Every function in the pipeline gets a unit test with known inputs before the calculate route is wired. No exceptions on test coverage for the engine.
+
+---
+
+**One additional note to pass back:**
+
+Section 28.2 in v1.7 said to remove `model_values`, `model_balance_sheet_values`, `model_cf_values`, and `model_debt_corkscrews` as persistent tables. Claude Code's re-read of the spec correctly identified that the snapshot system in Section 17 depends on those tables already being written — the snapshot endpoint reads from them. 
+
+The v1.8 spec resolves this with the publish workflow — published output lives in `model_published_versions` as JSONB. But for the draft calculate run, the snapshot system also needs to work. So the correct implementation is:
+
+- `model_values`, `model_balance_sheet_values`, `model_cf_values`, `model_debt_corkscrews` — **reinstate as persistent tables**, written on every calculate run via DELETE + batch INSERT
+- `model_published_versions` — also written on publish, contains the same data frozen as JSONB for the investor-facing versioned output
+- The snapshot endpoint reads from the persistent output tables (draft state)
+- The investor view reads from `model_published_versions` JSONB (published state)
+
+The v1.7 decision to remove those tables was wrong and v1.8's publish workflow doesn't fully resolve the contradiction. Reinstate them. The bulk write concern from the original review is handled by the DELETE + batch INSERT pattern in Item A above — not by removing persistence entirely.
+
+That's the complete answer. All items resolved. Proceed to Phase 1.

@@ -559,6 +559,150 @@ Common status codes:
 
 ---
 
+### NDAs
+
+#### `GET /api/nda`
+List all NDAs. **Requires: admin or team_member role**
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| status | string | Filter by status (signed, attached, voided) |
+| source | string | Filter by source (digital, external) |
+| attached | string | Filter by attachment status ('true' or 'false') |
+| search | string | Search by company name, email, or signer name |
+| limit | number | Max results (default: 50) |
+| offset | number | Pagination offset (default: 0) |
+
+**Response:**
+```json
+{
+  "ndas": [
+    {
+      "id": "uuid",
+      "source": "digital",
+      "signer_company_name": "Acme Marketing",
+      "signer_full_name": "John Smith",
+      "signer_email": "john@acme.com",
+      "signed_at": "2026-01-15T10:30:00.000Z",
+      "status": "signed",
+      "deal_id": null
+    }
+  ],
+  "count": 42
+}
+```
+
+#### `POST /api/nda/sign`
+Public endpoint for electronic NDA signing. No authentication required.
+
+**Request Body:**
+```json
+{
+  "company_name": "Acme Marketing Agency",
+  "company_address": "123 Main St, Austin, TX 78701",
+  "full_name": "John Smith",
+  "title": "CEO",
+  "email": "john@acme.com",
+  "phone": "512-555-1234",
+  "signature": "John Smith"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "NDA signed successfully. A copy will be sent to your email.",
+  "nda": {
+    "id": "uuid",
+    "signed_at": "2026-01-15T10:30:00.000Z",
+    "effective_date": "2026-01-15"
+  }
+}
+```
+
+#### `POST /api/nda/upload-external`
+Upload an externally signed NDA. **Requires: admin or team_member role**
+
+Use `multipart/form-data` for this endpoint.
+
+**Form Fields:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| file | File (PDF) | Yes | The signed NDA PDF |
+| signer_company_name | string | Yes | Company name of the signer |
+| signer_full_name | string | Yes | Full name of the signer |
+| signer_email | string | Yes | Email of the signer |
+| signer_company_address | string | No | Company address |
+| signer_title | string | No | Job title |
+| signer_phone | string | No | Phone number |
+| signed_at | string | No | Date NDA was signed (ISO format, defaults to now) |
+| effective_date | string | No | Effective date (YYYY-MM-DD, defaults to signed_at date) |
+| notes | string | No | Internal notes about this NDA |
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "External NDA uploaded successfully",
+  "nda": {
+    "id": "uuid",
+    "source": "external",
+    "signer_company_name": "Acme Marketing",
+    "signer_full_name": "John Smith",
+    "signer_email": "john@acme.com",
+    "signed_at": "2026-01-10T00:00:00.000Z",
+    "effective_date": "2026-01-10",
+    "status": "signed"
+  }
+}
+```
+
+#### `GET /api/nda/unattached`
+List NDAs not attached to any deal. **Requires: admin or team_member role**
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "signer_company_name": "Acme Marketing",
+    "signer_full_name": "John Smith",
+    "signer_email": "john@acme.com",
+    "signed_at": "2026-01-15T10:30:00.000Z",
+    "source": "digital"
+  }
+]
+```
+
+#### `GET /api/nda/:ndaId`
+Get a specific NDA. **Requires: admin or team_member role**
+
+**Response:** Full NDA object with related deal and profile data
+
+#### `PATCH /api/nda/:ndaId`
+Update an NDA. **Requires: admin or team_member role**
+
+**Request Body:**
+```json
+{
+  "deal_id": "uuid",
+  "notes": "Internal notes here",
+  "status": "voided"
+}
+```
+
+#### `GET /api/nda/:ndaId/pdf`
+Download the NDA PDF. **Requires: admin or team_member role**
+
+**Response:** PDF file download
+
+#### `DELETE /api/nda/:ndaId`
+Delete an NDA. **Requires: admin role**
+
+---
+
 ## User Roles
 
 | Role | Description | Permissions |

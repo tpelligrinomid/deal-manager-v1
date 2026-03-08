@@ -1,10 +1,44 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const { v4: uuidv4 } = require('uuid');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { supabaseAdmin, createSupabaseClient } = require('../lib/supabase');
 const { generateNdaPdf } = require('../services/pdfGenerator');
 const path = require('path');
 const fs = require('fs').promises;
+
+// Configure multer for external NDA PDF uploads
+const ndaUploadDir = process.env.NDA_UPLOAD_DIR || './uploads/ndas';
+const maxFileSize = parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024; // 50MB default
+
+const ndaStorage = multer.diskStorage({
+  destination: async (req, file, cb) => {
+    try {
+      await fs.mkdir(ndaUploadDir, { recursive: true });
+      cb(null, ndaUploadDir);
+    } catch (error) {
+      cb(error);
+    }
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = `external-${uuidv4()}.pdf`;
+    cb(null, uniqueName);
+  }
+});
+
+const uploadNda = multer({
+  storage: ndaStorage,
+  limits: { fileSize: maxFileSize },
+  fileFilter: (req, file, cb) => {
+    // Only allow PDF files for external NDAs
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed for NDA uploads'));
+    }
+  }
+});
 
 // Company info for counter-signature (from env or defaults)
 const COMPANY_NAME = process.env.NDA_COMPANY_NAME || 'Aragon Holdings LLC';
@@ -412,7 +446,7 @@ router.get('/terms', async (req, res) => {
  */
 router.get('/', authenticate, requireRole(['admin', 'team_member']), async (req, res) => {
   try {
-    const { status, attached, search, limit = 50, offset = 0 } = req.query;
+    const { status, attached, source, search, limit = 50, offset = 0 } = req.query;
 
     let query = req.supabase
       .from('ndas')
@@ -423,6 +457,11 @@ router.get('/', authenticate, requireRole(['admin', 'team_member']), async (req,
     // Filter by status
     if (status) {
       query = query.eq('status', status);
+    }
+
+    // Filter by source (digital or external)
+    if (source) {
+      query = query.eq('source', source);
     }
 
     // Filter by attachment status
@@ -449,6 +488,170 @@ router.get('/', authenticate, requireRole(['admin', 'team_member']), async (req,
 });
 
 /**
+ * POST /api/nda/upload-external
+ * Upload an externally signed NDA (team only)
+ * For NDAs that were signed outside the platform
+ */
+router.post('/upload-external', authenticate, requireRole(['admin', 'team_member']), uploadNda.single('file'), async (req, res) => {
+  try {
+    const {
+      signer_company_name,
+      signer_company_address,
+      signer_full_name,
+      signer_title,
+      signer_email,
+      signer_phone,
+      signed_at,
+      effective_date,
+      notes
+    } = req.body;
+
+    // Validation
+    if (!req.file) {
+      return res.status(400).json({ error: 'No PDF file uploaded' });
+    }
+
+    if (!signer_company_name || !signer_full_name || !signer_email) {
+      // Clean up uploaded file
+      await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['signer_company_name', 'signer_full_name', 'signer_email']
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(signer_email)) {
+      await fs.unlink(req.file.path).catch(() => {});
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const normalizedEmail = signer_email.toLowerCase().trim();
+
+    // Check if this company/email combo already has an NDA
+    const { data: existingNda } = await req.supabase
+      .from('ndas')
+      .select('id, signed_at, source')
+      .eq('signer_email', normalizedEmail)
+      .eq('signer_company_name', signer_company_name.trim())
+      .single();
+
+    if (existingNda) {
+      await fs.unlink(req.file.path).catch(() => {});
+      return res.status(409).json({
+        error: 'An NDA already exists for this company and email',
+        existing_nda_id: existingNda.id,
+        signed_at: existingNda.signed_at,
+        source: existingNda.source
+      });
+    }
+
+    // Parse dates or use defaults
+    const signedAtDate = signed_at ? new Date(signed_at).toISOString() : new Date().toISOString();
+    const effectiveDateStr = effective_date || signedAtDate.split('T')[0];
+
+    // Upload to Supabase Storage if configured
+    let storagePath = req.file.path; // Default to local path
+    let publicUrl = null;
+
+    try {
+      const pdfBuffer = await fs.readFile(req.file.path);
+      const pdfBase64 = pdfBuffer.toString('base64');
+      const filename = `external-nda-${uuidv4()}.pdf`;
+
+      const supabaseUrl = process.env.SUPABASE_URL;
+      const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+
+      if (supabaseUrl && supabaseAnonKey) {
+        const uploadResponse = await fetch(`${supabaseUrl}/functions/v1/nda-upload-pdf`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseAnonKey}`
+          },
+          body: JSON.stringify({
+            nda_id: 'external-' + uuidv4(), // Temporary ID for storage path
+            pdf_base64: pdfBase64,
+            filename
+          })
+        });
+
+        if (uploadResponse.ok) {
+          const uploadResult = await uploadResponse.json();
+          storagePath = uploadResult.pdf_path;
+          publicUrl = uploadResult.signed_url;
+          // Clean up local file after successful upload to storage
+          await fs.unlink(req.file.path).catch(() => {});
+        }
+      }
+    } catch (uploadError) {
+      console.error('Error uploading to Supabase Storage:', uploadError);
+      // Continue with local file path as fallback
+    }
+
+    // Create the NDA record
+    const { data: nda, error: insertError } = await req.supabase
+      .from('ndas')
+      .insert({
+        source: 'external',
+        signer_company_name: signer_company_name.trim(),
+        signer_company_address: signer_company_address?.trim() || null,
+        signer_full_name: signer_full_name.trim(),
+        signer_title: signer_title?.trim() || null,
+        signer_email: normalizedEmail,
+        signer_phone: signer_phone?.trim() || null,
+        signed_at: signedAtDate,
+        effective_date: effectiveDateStr,
+        pdf_path: storagePath,
+        pdf_generated_at: new Date().toISOString(),
+        status: 'signed',
+        notes: notes?.trim() || null,
+        uploaded_by: req.user.id
+        // Fields left null for external NDAs:
+        // signature_text, signer_ip_address, signer_user_agent,
+        // counter_signer_name, counter_signer_title, counter_signed_at
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error inserting external NDA:', insertError);
+      // Clean up file if insert fails
+      if (storagePath === req.file.path) {
+        await fs.unlink(req.file.path).catch(() => {});
+      }
+      throw insertError;
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'External NDA uploaded successfully',
+      nda: {
+        id: nda.id,
+        source: 'external',
+        signer_company_name: nda.signer_company_name,
+        signer_full_name: nda.signer_full_name,
+        signer_email: nda.signer_email,
+        signed_at: nda.signed_at,
+        effective_date: nda.effective_date,
+        status: nda.status,
+        pdf_path: nda.pdf_path,
+        pdf_url: publicUrl
+      }
+    });
+
+  } catch (error) {
+    console.error('Error uploading external NDA:', error);
+    // Clean up uploaded file on error
+    if (req.file?.path) {
+      await fs.unlink(req.file.path).catch(() => {});
+    }
+    res.status(500).json({ error: 'Failed to upload external NDA' });
+  }
+});
+
+/**
  * GET /api/nda/unattached
  * List NDAs not yet attached to a deal (for deal creation dropdown)
  */
@@ -456,7 +659,7 @@ router.get('/unattached', authenticate, requireRole(['admin', 'team_member']), a
   try {
     const { data: ndas, error } = await req.supabase
       .from('ndas')
-      .select('id, signer_company_name, signer_full_name, signer_email, signed_at')
+      .select('id, signer_company_name, signer_full_name, signer_email, signed_at, source')
       .is('deal_id', null)
       .eq('status', 'signed')
       .order('signed_at', { ascending: false });
@@ -483,7 +686,8 @@ router.get('/:ndaId', authenticate, requireRole(['admin', 'team_member']), async
       .select(`
         *,
         deals:deal_id (id, agency_name, status),
-        attached_by_profile:attached_by (full_name, email)
+        attached_by_profile:attached_by (full_name, email),
+        uploaded_by_profile:uploaded_by (full_name, email)
       `)
       .eq('id', ndaId)
       .single();
