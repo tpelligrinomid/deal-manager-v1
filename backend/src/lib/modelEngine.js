@@ -602,6 +602,51 @@ function buildConsolidatedCF(entityCFResults, periods) {
 function buildConsolidatedPL(entityPLResults, periods) {
   const grid = [];
 
+  // ── Line-item-level consolidation using canonical_key ──
+  // Build a map: canonical_key → { metadata, periodAmounts: { [pi]: amount } }
+  const lineItemMap = {};
+  const lineItemOrder = []; // preserve insertion order for sort
+
+  for (const epl of entityPLResults) {
+    const lineItems = epl.lineItems || [];
+    const lineItemValues = epl.lineItemValues || {};
+
+    for (const li of lineItems) {
+      const key = li.canonical_key || `${li.statement}.${li.category}.${li.group_name}.${li.item_name}`
+        .toLowerCase().replace(/ /g, '_').replace(/&/g, 'and').replace(/\//g, '_').replace(/-/g, '_').replace(/__+/g, '_');
+
+      if (!lineItemMap[key]) {
+        lineItemMap[key] = {
+          canonicalKey: key,
+          itemName: li.item_name,
+          category: li.category,
+          groupName: li.group_name,
+          statement: li.statement,
+          sortOrder: li.sort_order || 0,
+          amounts: {}
+        };
+        lineItemOrder.push(key);
+      }
+
+      // Sum this entity's values into the consolidated line item
+      const values = lineItemValues[li.id] || [];
+      for (const v of values) {
+        lineItemMap[key].amounts[v.periodIndex] = (lineItemMap[key].amounts[v.periodIndex] || 0) + v.amount;
+      }
+    }
+  }
+
+  // Sort by category order (revenue → cogs → expense) then sort_order
+  const categoryOrder = { revenue: 0, cogs: 1, expense: 2 };
+  const lineItemDetail = lineItemOrder
+    .map(key => lineItemMap[key])
+    .sort((a, b) => {
+      const catDiff = (categoryOrder[a.category] || 9) - (categoryOrder[b.category] || 9);
+      if (catDiff !== 0) return catDiff;
+      return a.sortOrder - b.sortOrder;
+    });
+
+  // ── Aggregate grid (unchanged behavior) ──
   for (const period of periods) {
     const pi = period.index;
     let revenue = 0;
@@ -634,7 +679,7 @@ function buildConsolidatedPL(entityPLResults, periods) {
 
     grid.push({
       periodIndex: pi,
-      revenue: clientRevenue, // consolidated revenue = client-only
+      revenue: clientRevenue,
       clientRevenue,
       cogs,
       grossProfit: clientRevenue - cogs,
@@ -649,7 +694,7 @@ function buildConsolidatedPL(entityPLResults, periods) {
     });
   }
 
-  return grid;
+  return { grid, lineItemDetail };
 }
 
 // ─── 14. calculateModel (top-level orchestrator) ────────────────────
@@ -808,6 +853,7 @@ function calculateModel(input) {
           entityName: entity.entity_name,
           entityType: entity.entity_type,
           lineItemValues: entityResult.lineItemValues,
+          lineItems: filteredLineItems,
           grid: plGrid
         });
 

@@ -300,8 +300,8 @@ describe('buildConsolidatedPL', () => {
       }
     ];
     const consolidated = buildConsolidatedPL(entityPLResults, periods);
-    expect(consolidated[0].revenue).toBe(50000);
-    expect(consolidated[0].clientRevenue).toBe(50000);
+    expect(consolidated.grid[0].revenue).toBe(50000);
+    expect(consolidated.grid[0].clientRevenue).toBe(50000);
   });
 
   test('sums EBITDA across entities', () => {
@@ -316,8 +316,8 @@ describe('buildConsolidatedPL', () => {
       }
     ];
     const consolidated = buildConsolidatedPL(entityPLResults, periods);
-    expect(consolidated[0].ebitda).toBe(57000);
-    expect(consolidated[0].ebit).toBe(55500);
+    expect(consolidated.grid[0].ebitda).toBe(57000);
+    expect(consolidated.grid[0].ebit).toBe(55500);
   });
 
   test('handles staggered close dates', () => {
@@ -338,8 +338,8 @@ describe('buildConsolidatedPL', () => {
       }
     ];
     const consolidated = buildConsolidatedPL(entityPLResults, periods);
-    expect(consolidated[0].revenue).toBe(50000);
-    expect(consolidated[1].revenue).toBe(80000);
+    expect(consolidated.grid[0].revenue).toBe(50000);
+    expect(consolidated.grid[1].revenue).toBe(80000);
   });
 });
 
@@ -472,7 +472,7 @@ describe('calculateModel', () => {
 
     // Consolidated should match (single entity)
     const consolidated = result.runs[0].consolidatedPL;
-    expect(consolidated[0].ebitda).toBe(22500);
+    expect(consolidated.grid[0].ebitda).toBe(22500);
   });
 });
 
@@ -1298,9 +1298,9 @@ describe('calculateModel (Phase 4)', () => {
 
     const run = result.runs[0];
     // Period 0: only e1 revenue
-    expect(run.consolidatedPL[0].revenue).toBe(30000);
+    expect(run.consolidatedPL.grid[0].revenue).toBe(30000);
     // Period 3: both
-    expect(run.consolidatedPL[3].revenue).toBe(50000);
+    expect(run.consolidatedPL.grid[3].revenue).toBe(50000);
     // Both have BS results
     expect(run.entityBSResults).toHaveLength(2);
   });
