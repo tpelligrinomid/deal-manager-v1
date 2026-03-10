@@ -116,7 +116,8 @@ function projectEntity(entity, periods, drivers) {
   }
 
   // 4b. Project COGS line items (use segment revenue if segment-scoped, otherwise total)
-  const cogsItems = lineItems.filter(li => li.category === 'cogs');
+  const COGS_CATEGORIES = new Set(['cogs', 'cost_of_goods_sold']);
+  const cogsItems = lineItems.filter(li => COGS_CATEGORIES.has(li.category));
   const cogsByPeriod = {};
 
   for (const li of cogsItems) {
@@ -131,9 +132,17 @@ function projectEntity(entity, periods, drivers) {
     }
   }
 
-  // 4c. Project expense line items
-  const expenseItems = lineItems.filter(li => li.category === 'expense');
+  // 4c. Project expense/opex line items
+  const OPEX_CATEGORIES = new Set(['expense', 'opex', 'opex_people', 'opex_software', 'opex_facilities', 'opex_marketing', 'opex_other', 'opex_general']);
+  const expenseItems = lineItems.filter(li => OPEX_CATEGORIES.has(li.category));
   const opexByPeriod = {};
+
+  // Log any unrecognized categories
+  const KNOWN_CATEGORIES = new Set(['revenue', ...COGS_CATEGORIES, ...OPEX_CATEGORIES]);
+  const unknownCats = lineItems.filter(li => !KNOWN_CATEGORIES.has(li.category));
+  if (unknownCats.length > 0) {
+    console.log(`[ENGINE] Unrecognized categories:`, unknownCats.map(li => `"${li.item_name}"=${li.category}`).join(', '));
+  }
 
   for (const li of expenseItems) {
     const values = projectLineItem(li, periods, drivers, closePeriodIndex, revenueByPeriod);
@@ -641,7 +650,7 @@ function buildConsolidatedPL(entityPLResults, periods) {
   }
 
   // Sort by category order (revenue → cogs → expense) then sort_order
-  const categoryOrder = { revenue: 0, cogs: 1, expense: 2 };
+  const categoryOrder = { revenue: 0, cogs: 1, cost_of_goods_sold: 1, expense: 2, opex: 2, opex_people: 2, opex_software: 2, opex_facilities: 2, opex_marketing: 2, opex_other: 2, opex_general: 2 };
   const lineItemDetail = lineItemOrder
     .map(key => lineItemMap[key])
     .sort((a, b) => {
@@ -759,15 +768,6 @@ function calculateModel(input) {
           return scenarioMatch && opMatch;
         });
 
-        // DEBUG: log filtered-out items
-        const droppedItems = (entity.lineItems || []).filter(li => !filteredLineItems.includes(li));
-        if (droppedItems.length > 0) {
-          console.log(`[ENGINE DEBUG] ${entity.entity_name}: scenario=${scenario.id} opScenario=${opScenario.id}`);
-          console.log(`  Kept ${filteredLineItems.length}/${entity.lineItems.length} items. Dropped:`);
-          for (const li of droppedItems) {
-            console.log(`    "${li.item_name}" cat=${li.category} scen=${li.scenario_id} opScen=${li.operating_scenario_id}`);
-          }
-        }
 
         const filteredDrivers = (entity.drivers || []).filter(d =>
           d.operating_scenario_id == null || d.operating_scenario_id === opScenario.id
