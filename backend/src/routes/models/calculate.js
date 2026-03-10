@@ -136,6 +136,14 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
         }
       }
 
+      // DEBUG: Log what line items are going to the engine
+      const revenueItems = entity.lineItems.filter(li => li.category === 'revenue');
+      console.log(`[CALC DEBUG] Entity ${entity.entity_name} (${entity.entity_type}):`,
+        `${entity.lineItems.length} line items, ${revenueItems.length} revenue items`);
+      for (const li of revenueItems) {
+        console.log(`  Revenue: "${li.item_name}" base=${li.base_amount} type=${li.item_type} sys=${li.is_system_generated} id=${li.id}`);
+      }
+
       // 6. Load overrides: model_values where is_override = true
       const lineItemIds = entity.lineItems.map(li => li.id);
       if (lineItemIds.length > 0) {
@@ -231,6 +239,16 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
     };
 
     const result = calculateModel(engineInput);
+
+    // DEBUG: Log engine output for first run
+    if (result.runs.length > 0) {
+      const run0 = result.runs[0];
+      for (const er of run0.entityResults) {
+        const p0 = er.grid[0];
+        console.log(`[CALC DEBUG] Engine output for ${er.entityName}: period0 revenue=${p0?.revenue} cogs=${p0?.cogs} opex=${p0?.opex} ebitda=${p0?.ebitda} NI=${p0?.netIncome}`);
+        console.log(`  lineItemValues keys: ${Object.keys(er.lineItemValues).length}`);
+      }
+    }
 
     // 8. Write output to DB
     const scenarioIdList = scenarios.map(s => s.id);
