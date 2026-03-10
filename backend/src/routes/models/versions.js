@@ -173,26 +173,9 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
       entity.segments = segments || [];
       entity.dealRefs = dealRefs || [];
 
-      // Seed from deals — but exclude system-generated revenue if user entered their own
-      const hasUserRevenueItems = entity.lineItems.some(li => li.category === 'revenue' && !li.is_system_generated);
-
-      if (hasUserRevenueItems) {
-        entity.lineItems = entity.lineItems.filter(li => !(li.category === 'revenue' && li.is_system_generated));
-      } else {
-        const activeRefs = (dealRefs || []).filter(r =>
-          !r.seed_overridden && r.pull_reported_revenue !== false && r.deals?.reported_revenue
-        );
-        if (activeRefs.length > 0) {
-          for (const ref of activeRefs) {
-            const monthlyRevenue = Number(ref.deals.reported_revenue) / 12;
-            for (const li of entity.lineItems) {
-              if (li.category === 'revenue' && li.is_system_generated) {
-                li.base_amount = monthlyRevenue;
-              }
-            }
-          }
-        }
-      }
+      // Filter out display-only subtotal rows (item_type = 'total') — not projection inputs.
+      // Trust base_amount values from model_line_items as the source of truth.
+      entity.lineItems = entity.lineItems.filter(li => li.item_type !== 'total');
 
       // Load overrides
       const lineItemIds = entity.lineItems.map(li => li.id);

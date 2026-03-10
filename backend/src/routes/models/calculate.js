@@ -111,38 +111,10 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
       entity.segments = segments || [];
       entity.dealRefs = dealRefs || [];
 
-      // 5. Seed from deals: for non-overridden refs, set revenue base_amount = reported_revenue / 12
-      // Only seed system-generated items. If user has entered their own revenue items,
-      // exclude system-generated revenue items entirely to prevent double-counting.
-      const hasUserRevenueItems = entity.lineItems.some(li => li.category === 'revenue' && !li.is_system_generated);
-
-      if (hasUserRevenueItems) {
-        // User entered their own revenue — remove system-generated revenue items
-        entity.lineItems = entity.lineItems.filter(li => !(li.category === 'revenue' && li.is_system_generated));
-      } else {
-        // No user revenue items — seed system-generated ones from deal reported_revenue
-        const activeRefs = (dealRefs || []).filter(r =>
-          !r.seed_overridden && r.pull_reported_revenue !== false && r.deals?.reported_revenue
-        );
-        if (activeRefs.length > 0) {
-          for (const ref of activeRefs) {
-            const monthlyRevenue = Number(ref.deals.reported_revenue) / 12;
-            for (const li of entity.lineItems) {
-              if (li.category === 'revenue' && li.is_system_generated) {
-                li.base_amount = monthlyRevenue;
-              }
-            }
-          }
-        }
-      }
-
-      // DEBUG: Log what line items are going to the engine
-      const revenueItems = entity.lineItems.filter(li => li.category === 'revenue');
-      console.log(`[CALC DEBUG] Entity ${entity.entity_name} (${entity.entity_type}):`,
-        `${entity.lineItems.length} line items, ${revenueItems.length} revenue items`);
-      for (const li of revenueItems) {
-        console.log(`  Revenue: "${li.item_name}" base=${li.base_amount} type=${li.item_type} sys=${li.is_system_generated} id=${li.id}`);
-      }
+      // 5. Filter out display-only subtotal rows (item_type = 'total') — not projection inputs.
+      // Trust base_amount values from model_line_items as the source of truth.
+      // No seeding: the frontend sets base_amount when line items are created.
+      entity.lineItems = entity.lineItems.filter(li => li.item_type !== 'total');
 
       // 6. Load overrides: model_values where is_override = true
       const lineItemIds = entity.lineItems.map(li => li.id);
@@ -239,16 +211,6 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
     };
 
     const result = calculateModel(engineInput);
-
-    // DEBUG: Log engine output for first run
-    if (result.runs.length > 0) {
-      const run0 = result.runs[0];
-      for (const er of run0.entityResults) {
-        const p0 = er.grid[0];
-        console.log(`[CALC DEBUG] Engine output for ${er.entityName}: period0 revenue=${p0?.revenue} cogs=${p0?.cogs} opex=${p0?.opex} ebitda=${p0?.ebitda} NI=${p0?.netIncome}`);
-        console.log(`  lineItemValues keys: ${Object.keys(er.lineItemValues).length}`);
-      }
-    }
 
     // 8. Write output to DB
     const scenarioIdList = scenarios.map(s => s.id);
