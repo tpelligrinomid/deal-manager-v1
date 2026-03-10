@@ -173,14 +173,22 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
       entity.segments = segments || [];
       entity.dealRefs = dealRefs || [];
 
-      // Seed from deals
-      const activeRefs = (dealRefs || []).filter(r => !r.seed_overridden && r.deals?.reported_revenue);
-      if (activeRefs.length > 0) {
-        for (const ref of activeRefs) {
-          const monthlyRevenue = Number(ref.deals.reported_revenue) / 12;
-          for (const li of entity.lineItems) {
-            if (li.category === 'revenue' && li.is_system_generated) {
-              li.base_amount = monthlyRevenue;
+      // Seed from deals — but exclude system-generated revenue if user entered their own
+      const hasUserRevenueItems = entity.lineItems.some(li => li.category === 'revenue' && !li.is_system_generated);
+
+      if (hasUserRevenueItems) {
+        entity.lineItems = entity.lineItems.filter(li => !(li.category === 'revenue' && li.is_system_generated));
+      } else {
+        const activeRefs = (dealRefs || []).filter(r =>
+          !r.seed_overridden && r.pull_reported_revenue !== false && r.deals?.reported_revenue
+        );
+        if (activeRefs.length > 0) {
+          for (const ref of activeRefs) {
+            const monthlyRevenue = Number(ref.deals.reported_revenue) / 12;
+            for (const li of entity.lineItems) {
+              if (li.category === 'revenue' && li.is_system_generated) {
+                li.base_amount = monthlyRevenue;
+              }
             }
           }
         }
@@ -258,7 +266,9 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
             sellerNoteIoMonths: dt.seller_note_io_months || scenario.default_seller_note_io_months || 0,
             sellerNoteDeferredMonths: dt.seller_note_deferred_months || scenario.default_seller_note_deferred_months || 0,
             sellerNotePik: dt.seller_note_pik != null ? dt.seller_note_pik : (scenario.default_seller_note_pik || false),
-            equityContributed: equityFromInvestors + equityFromAragon + equityFromOther + equityFromTargetBalance
+            equityContributed: equityFromInvestors + equityFromAragon + equityFromOther + equityFromTargetBalance,
+            workingCapitalReserve: Number(dt.working_capital_reserve) || 0,
+            transactionCosts: Number(dt.transaction_costs) || 0
           };
         }
       }

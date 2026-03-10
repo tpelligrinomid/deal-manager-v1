@@ -438,7 +438,9 @@ function buildEntityCF(params) {
 
     // Investing CF
     const capex = capexRow ? capexRow.capex : 0;
-    const acquisitions = (closeTerms && pi === closePeriodIndex) ? closeTerms.purchasePrice : 0;
+    const acquisitions = (closeTerms && pi === closePeriodIndex)
+      ? closeTerms.purchasePrice + (closeTerms.transactionCosts || 0)
+      : 0;
     const cashFromInvesting = -capex - acquisitions;
 
     // Financing CF
@@ -446,7 +448,9 @@ function buildEntityCF(params) {
     const cashFromFinancing = debtProceeds - debtRepayment - cashInterestTotal + equityContributions;
 
     const netChange = cashFromOperations + cashFromInvesting + cashFromFinancing;
-    const beginningCash = pi === closePeriodIndex ? 0 : prevCash;
+    // Working capital reserve is Day 1 cash set aside at close
+    const wcReserve = (closeTerms && pi === closePeriodIndex) ? (closeTerms.workingCapitalReserve || 0) : 0;
+    const beginningCash = pi === closePeriodIndex ? wcReserve : prevCash;
     const endingCash = beginningCash + netChange;
 
     grid.push({
@@ -818,7 +822,9 @@ function calculateModel(input) {
           const et = scenarioDealTerms.entities[entity.id];
           closeTerms = {
             purchasePrice: et.purchasePrice || 0,
-            equityContributed: et.equityContributed || 0
+            equityContributed: et.equityContributed || 0,
+            workingCapitalReserve: et.workingCapitalReserve || 0,
+            transactionCosts: et.transactionCosts || 0
           };
         }
 
