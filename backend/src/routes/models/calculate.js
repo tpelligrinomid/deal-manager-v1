@@ -191,7 +191,8 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
             sellerNoteIoMonths: dt.seller_note_io_months || scenario.default_seller_note_io_months || 0,
             sellerNoteDeferredMonths: dt.seller_note_deferred_months || scenario.default_seller_note_deferred_months || 0,
             sellerNotePik: dt.seller_note_pik != null ? dt.seller_note_pik : (scenario.default_seller_note_pik || false),
-            equityContributed: equityFromInvestors + equityFromAragon + equityFromOther + equityFromTargetBalance,
+            equityContributed: equityFromInvestors + equityFromAragon + equityFromOther,
+            targetBalance: equityFromTargetBalance,
             workingCapitalReserve: Number(dt.working_capital_reserve) || 0,
             transactionCosts: Number(dt.transaction_costs) || 0
           };

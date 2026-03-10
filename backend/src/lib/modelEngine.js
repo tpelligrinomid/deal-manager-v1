@@ -439,9 +439,14 @@ function buildEntityCF(params) {
 
     // Investing CF
     const capex = capexRow ? capexRow.capex : 0;
-    const acquisitions = (closeTerms && pi === closePeriodIndex)
+    // Net acquisition = purchase price + txn costs - target's existing cash balance
+    const grossAcquisition = (closeTerms && pi === closePeriodIndex)
       ? closeTerms.purchasePrice + (closeTerms.transactionCosts || 0)
       : 0;
+    const targetCashAcquired = (closeTerms && pi === closePeriodIndex)
+      ? (closeTerms.targetBalance || 0)
+      : 0;
+    const acquisitions = grossAcquisition - targetCashAcquired;
     const cashFromInvesting = -capex - acquisitions;
 
     // Financing CF
@@ -449,7 +454,7 @@ function buildEntityCF(params) {
     const cashFromFinancing = debtProceeds - debtRepayment - cashInterestTotal + equityContributions;
 
     const netChange = cashFromOperations + cashFromInvesting + cashFromFinancing;
-    // Working capital reserve is Day 1 cash set aside at close
+    // WC reserve is additional Day 1 cash set aside at close
     const wcReserve = (closeTerms && pi === closePeriodIndex) ? (closeTerms.workingCapitalReserve || 0) : 0;
     const beginningCash = pi === closePeriodIndex ? wcReserve : prevCash;
     const endingCash = beginningCash + netChange;
@@ -825,6 +830,7 @@ function calculateModel(input) {
           closeTerms = {
             purchasePrice: et.purchasePrice || 0,
             equityContributed: et.equityContributed || 0,
+            targetBalance: et.targetBalance || 0,
             workingCapitalReserve: et.workingCapitalReserve || 0,
             transactionCosts: et.transactionCosts || 0
           };
