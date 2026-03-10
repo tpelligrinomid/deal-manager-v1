@@ -132,17 +132,9 @@ function projectEntity(entity, periods, drivers) {
     }
   }
 
-  // 4c. Project expense/opex line items
-  const OPEX_CATEGORIES = new Set(['expense', 'opex', 'opex_people', 'opex_software', 'opex_facilities', 'opex_marketing', 'opex_other', 'opex_general']);
-  const expenseItems = lineItems.filter(li => OPEX_CATEGORIES.has(li.category));
+  // 4c. Project expense/opex line items — anything not revenue or COGS is opex
+  const expenseItems = lineItems.filter(li => li.category !== 'revenue' && !COGS_CATEGORIES.has(li.category));
   const opexByPeriod = {};
-
-  // Log any unrecognized categories
-  const KNOWN_CATEGORIES = new Set(['revenue', ...COGS_CATEGORIES, ...OPEX_CATEGORIES]);
-  const unknownCats = lineItems.filter(li => !KNOWN_CATEGORIES.has(li.category));
-  if (unknownCats.length > 0) {
-    console.log(`[ENGINE] Unrecognized categories:`, unknownCats.map(li => `"${li.item_name}"=${li.category}`).join(', '));
-  }
 
   for (const li of expenseItems) {
     const values = projectLineItem(li, periods, drivers, closePeriodIndex, revenueByPeriod);
@@ -650,7 +642,7 @@ function buildConsolidatedPL(entityPLResults, periods) {
   }
 
   // Sort by category order (revenue → cogs → expense) then sort_order
-  const categoryOrder = { revenue: 0, cogs: 1, cost_of_goods_sold: 1, expense: 2, opex: 2, opex_people: 2, opex_software: 2, opex_facilities: 2, opex_marketing: 2, opex_other: 2, opex_general: 2 };
+  const categoryOrder = { revenue: 0, cogs: 1, cost_of_goods_sold: 1 }; // everything else = 2 (opex)
   const lineItemDetail = lineItemOrder
     .map(key => lineItemMap[key])
     .sort((a, b) => {
