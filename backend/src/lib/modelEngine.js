@@ -439,8 +439,11 @@ function buildEntityCF(params) {
 
     // Investing CF
     const capex = capexRow ? capexRow.capex : 0;
+    // Acquisition cash outflow = purchase price minus seller rollover (non-cash) + txn costs
+    const rolloverPct = closeTerms ? (closeTerms.sellerRolloverPct || 0) : 0;
+    const cashPurchase = closeTerms ? closeTerms.purchasePrice * (1 - rolloverPct) : 0;
     const acquisitions = (closeTerms && pi === closePeriodIndex)
-      ? closeTerms.purchasePrice + (closeTerms.transactionCosts || 0)
+      ? cashPurchase + (closeTerms.transactionCosts || 0)
       : 0;
     const cashFromInvesting = -capex - acquisitions;
 
@@ -526,7 +529,9 @@ function buildEntityBS(params) {
     const accountsPayable = wcRow ? wcRow.ap : 0;
     const accruedExpenses = wcRow ? wcRow.accrued : 0;
 
-    const contributedCapital = closeTerms ? closeTerms.equityContributed : 0;
+    // Contributed capital = cash equity from investors + seller's rolled equity (non-cash)
+    const sellerRollover = closeTerms ? closeTerms.purchasePrice * (closeTerms.sellerRolloverPct || 0) : 0;
+    const contributedCapital = closeTerms ? closeTerms.equityContributed + sellerRollover : 0;
     const retainedEarnings = cumulativeNetIncome;
 
     const totalAssets = cash + accountsReceivable + prepaidExpenses + goodwill + fixedAssetsNet;
@@ -828,6 +833,7 @@ function calculateModel(input) {
             purchasePrice: et.purchasePrice || 0,
             equityContributed: et.equityContributed || 0,
             targetBalance: et.targetBalance || 0,
+            sellerRolloverPct: et.sellerRolloverPct || 0,
             workingCapitalReserve: et.workingCapitalReserve || 0,
             transactionCosts: et.transactionCosts || 0
           };

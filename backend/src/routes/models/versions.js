@@ -251,6 +251,7 @@ router.post('/publish', requireModelAccess('editor'), async (req, res) => {
             sellerNotePik: dt.seller_note_pik != null ? dt.seller_note_pik : (scenario.default_seller_note_pik || false),
             equityContributed: equityFromInvestors + equityFromAragon + equityFromOther,
             targetBalance: equityFromTargetBalance,
+            sellerRolloverPct: Number(dt.seller_equity_rollover_pct) || 0,
             workingCapitalReserve: Number(dt.working_capital_reserve) || 0,
             transactionCosts: Number(dt.transaction_costs) || 0
           };
