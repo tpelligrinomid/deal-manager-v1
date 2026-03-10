@@ -439,14 +439,9 @@ function buildEntityCF(params) {
 
     // Investing CF
     const capex = capexRow ? capexRow.capex : 0;
-    // Net acquisition = purchase price + txn costs - target's existing cash balance
-    const grossAcquisition = (closeTerms && pi === closePeriodIndex)
+    const acquisitions = (closeTerms && pi === closePeriodIndex)
       ? closeTerms.purchasePrice + (closeTerms.transactionCosts || 0)
       : 0;
-    const targetCashAcquired = (closeTerms && pi === closePeriodIndex)
-      ? (closeTerms.targetBalance || 0)
-      : 0;
-    const acquisitions = grossAcquisition - targetCashAcquired;
     const cashFromInvesting = -capex - acquisitions;
 
     // Financing CF
@@ -454,9 +449,11 @@ function buildEntityCF(params) {
     const cashFromFinancing = debtProceeds - debtRepayment - cashInterestTotal + equityContributions;
 
     const netChange = cashFromOperations + cashFromInvesting + cashFromFinancing;
-    // WC reserve is additional Day 1 cash set aside at close
-    const wcReserve = (closeTerms && pi === closePeriodIndex) ? (closeTerms.workingCapitalReserve || 0) : 0;
-    const beginningCash = pi === closePeriodIndex ? wcReserve : prevCash;
+    // Day 1 cash = target's existing cash balance + additional WC reserve
+    const day1Cash = (closeTerms && pi === closePeriodIndex)
+      ? (closeTerms.targetBalance || 0) + (closeTerms.workingCapitalReserve || 0)
+      : 0;
+    const beginningCash = pi === closePeriodIndex ? day1Cash : prevCash;
     const endingCash = beginningCash + netChange;
 
     grid.push({
