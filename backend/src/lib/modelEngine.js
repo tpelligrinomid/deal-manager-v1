@@ -759,6 +759,16 @@ function calculateModel(input) {
           return scenarioMatch && opMatch;
         });
 
+        // DEBUG: log filtered-out items
+        const droppedItems = (entity.lineItems || []).filter(li => !filteredLineItems.includes(li));
+        if (droppedItems.length > 0) {
+          console.log(`[ENGINE DEBUG] ${entity.entity_name}: scenario=${scenario.id} opScenario=${opScenario.id}`);
+          console.log(`  Kept ${filteredLineItems.length}/${entity.lineItems.length} items. Dropped:`);
+          for (const li of droppedItems) {
+            console.log(`    "${li.item_name}" cat=${li.category} scen=${li.scenario_id} opScen=${li.operating_scenario_id}`);
+          }
+        }
+
         const filteredDrivers = (entity.drivers || []).filter(d =>
           d.operating_scenario_id == null || d.operating_scenario_id === opScenario.id
         );
