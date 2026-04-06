@@ -195,7 +195,15 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
             targetBalance: equityFromTargetBalance,
             sellerRolloverPct: Number(dt.seller_equity_rollover_pct) || 0,
             workingCapitalReserve: Number(dt.working_capital_reserve) || 0,
-            transactionCosts: Number(dt.transaction_costs) || 0
+            transactionCosts: Number(dt.transaction_costs) || 0,
+            earnoutAmount: dt.earnout_amount != null ? Number(dt.earnout_amount) : null,
+            earnoutPctOfProfit: dt.earnout_pct_of_profit != null ? Number(dt.earnout_pct_of_profit) : null,
+            earnoutThreshold: dt.earnout_threshold != null ? Number(dt.earnout_threshold) : null,
+            earnoutCap: dt.earnout_cap != null ? Number(dt.earnout_cap) : null,
+            earnoutPeriodMonths: dt.earnout_period_months != null ? Number(dt.earnout_period_months) : null,
+            earnoutIsEquityInstrument: dt.earnout_is_equity_instrument != null
+              ? dt.earnout_is_equity_instrument
+              : (scenario.default_earnout_is_equity_instrument || false)
           };
         }
       }
@@ -357,6 +365,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
               other_current_liabilities: row.otherCurrentLiabilities || 0,
               long_term_debt: row.longTermDebt,
               other_lt_liabilities: row.otherLtLiabilities || 0,
+              earnout_liability: row.earnoutLiability || 0,
               total_liabilities: row.totalLiabilities,
               contributed_capital: row.contributedCapital,
               retained_earnings: row.retainedEarnings,
@@ -414,6 +423,7 @@ router.post('/', requireModelAccess('editor'), async (req, res) => {
               debt_proceeds: row.debtProceeds,
               debt_repayment: row.debtRepayment,
               equity_contributions: row.equityContributions,
+              earnout_payment: row.earnoutPayment || 0,
               dividends: 0,
               other_financing: 0,
               cash_from_financing: row.cashFromFinancing,
