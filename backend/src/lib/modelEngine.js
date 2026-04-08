@@ -284,6 +284,82 @@ function buildDebtSchedule(instruments, periods) {
   return results;
 }
 
+// ─── 5b. buildEarnoutSchedule ────────────────────────────────────
+function buildEarnoutSchedule(params) {
+  const { earnoutTerms, entityPL, periods, closePeriodIndex } = params;
+
+  // If no earnout or zero amount, return empty schedule
+  if (!earnoutTerms || !earnoutTerms.earnoutAmount) {
+    return { schedule: [], isEquityInstrument: false };
+  }
+
+  const {
+    earnoutAmount,
+    earnoutPctOfProfit,
+    earnoutThreshold,
+    earnoutCap: rawCap,
+    earnoutPeriodMonths,
+    earnoutIsEquityInstrument
+  } = earnoutTerms;
+
+  const cap = rawCap != null ? rawCap : earnoutAmount;
+  const windowMonths = earnoutPeriodMonths || 24;
+  const windowEnd = closePeriodIndex + windowMonths; // exclusive
+  const threshold = earnoutThreshold != null ? earnoutThreshold : 0;
+  const isEquityInstrument = earnoutIsEquityInstrument || false;
+
+  const schedule = [];
+  let cumulativePayout = 0;
+
+  for (const period of periods) {
+    const pi = period.index;
+
+    if (pi < closePeriodIndex || pi >= windowEnd) {
+      schedule.push({
+        periodIndex: pi,
+        periodPayout: 0,
+        cumulativePayout,
+        remainingLiability: pi < closePeriodIndex ? 0 : earnoutAmount - cumulativePayout
+      });
+      continue;
+    }
+
+    // Initialize remaining liability on close
+    const priorCumulative = cumulativePayout;
+    let periodPayout = 0;
+
+    if (priorCumulative >= cap) {
+      // Already exhausted
+      periodPayout = 0;
+    } else if (earnoutPctOfProfit != null) {
+      // Profit-share mode
+      const plRow = entityPL.find(r => r.periodIndex === pi);
+      const operatingProfit = plRow ? plRow.ebitda : 0;
+      if (operatingProfit > threshold) {
+        periodPayout = operatingProfit * (earnoutPctOfProfit / 100);
+        periodPayout = Math.min(periodPayout, cap - priorCumulative);
+        periodPayout = Math.max(periodPayout, 0);
+      }
+    } else {
+      // Fixed-schedule mode
+      periodPayout = earnoutAmount / windowMonths;
+      periodPayout = Math.min(periodPayout, cap - priorCumulative);
+      periodPayout = Math.max(periodPayout, 0);
+    }
+
+    cumulativePayout += periodPayout;
+
+    schedule.push({
+      periodIndex: pi,
+      periodPayout,
+      cumulativePayout,
+      remainingLiability: earnoutAmount - cumulativePayout
+    });
+  }
+
+  return { schedule, isEquityInstrument };
+}
+
 // ─── 6. deriveWorkingCapital ──────────────────────────────────────
 function deriveWorkingCapital(entityPLGrid, periods, drivers, closePeriodIndex) {
   const result = [];
@@ -383,8 +459,9 @@ function buildEntityPL(entityResult, periods, drivers, closePeriodIndex, debtSch
 
 // ─── 9. buildEntityCF ─────────────────────────────────────────────
 function buildEntityCF(params) {
-  const { entityPL, wcGrid, capexGrid, debtSchedules, periods, closePeriodIndex, closeTerms } = params;
+  const { entityPL, wcGrid, capexGrid, debtSchedules, periods, closePeriodIndex, closeTerms, earnoutSchedule } = params;
   const schedules = debtSchedules || [];
+  const earnoutSched = earnoutSchedule || { schedule: [], isEquityInstrument: false };
   const grid = [];
   let prevCash = 0;
 
@@ -402,6 +479,7 @@ function buildEntityCF(params) {
         cashFromOperations: 0,
         capex: 0, acquisitions: 0, cashFromInvesting: 0,
         debtProceeds: 0, debtRepayment: 0, cashInterest: 0, equityContributions: 0,
+        earnoutPayment: 0,
         cashFromFinancing: 0,
         netChange: 0, beginningCash: 0, endingCash: 0
       });
@@ -447,9 +525,13 @@ function buildEntityCF(params) {
       : 0;
     const cashFromInvesting = -capex - acquisitions;
 
+    // Earnout payment (financing outflow)
+    const earnoutRow = earnoutSched.schedule.find(r => r.periodIndex === pi);
+    const earnoutPayment = earnoutRow ? earnoutRow.periodPayout : 0;
+
     // Financing CF
     const equityContributions = (closeTerms && pi === closePeriodIndex) ? closeTerms.equityContributed : 0;
-    const cashFromFinancing = debtProceeds - debtRepayment - cashInterestTotal + equityContributions;
+    const cashFromFinancing = debtProceeds - debtRepayment - cashInterestTotal + equityContributions - earnoutPayment;
 
     const netChange = cashFromOperations + cashFromInvesting + cashFromFinancing;
     // Day 1 cash = target's existing cash balance + additional WC reserve
@@ -466,6 +548,7 @@ function buildEntityCF(params) {
       cashFromOperations,
       capex, acquisitions, cashFromInvesting,
       debtProceeds, debtRepayment, cashInterest: cashInterestTotal, equityContributions,
+      earnoutPayment,
       cashFromFinancing,
       netChange, beginningCash, endingCash
     });
@@ -478,8 +561,9 @@ function buildEntityCF(params) {
 
 // ─── 10. buildEntityBS ────────────────────────────────────────────
 function buildEntityBS(params) {
-  const { entityPL, wcGrid, capexGrid, debtSchedules, cfGrid, periods, closePeriodIndex, closeTerms } = params;
+  const { entityPL, wcGrid, capexGrid, debtSchedules, cfGrid, periods, closePeriodIndex, closeTerms, earnoutSchedule } = params;
   const schedules = debtSchedules || [];
+  const earnoutSched = earnoutSchedule || { schedule: [], isEquityInstrument: false };
   const grid = [];
   let cumulativeCapex = 0;
   let cumulativeDa = 0;
@@ -498,7 +582,7 @@ function buildEntityBS(params) {
         cash: 0, accountsReceivable: 0, prepaidExpenses: 0, otherCurrentAssets: 0,
         goodwill: 0, otherIntangibles: 0, fixedAssetsNet: 0, otherLtAssets: 0, totalAssets: 0,
         accountsPayable: 0, accruedExpenses: 0, currentPortionLtd: 0, otherCurrentLiabilities: 0,
-        longTermDebt: 0, otherLtLiabilities: 0, totalLiabilities: 0,
+        longTermDebt: 0, otherLtLiabilities: 0, earnoutLiability: 0, totalLiabilities: 0,
         contributedCapital: 0, retainedEarnings: 0, totalEquity: 0,
         isBalanced: true
       });
@@ -529,14 +613,21 @@ function buildEntityBS(params) {
     const accountsPayable = wcRow ? wcRow.ap : 0;
     const accruedExpenses = wcRow ? wcRow.accrued : 0;
 
+    // Earnout liability
+    const earnoutRow = earnoutSched.schedule.find(r => r.periodIndex === pi);
+    const earnoutLiability = earnoutRow ? earnoutRow.remainingLiability : 0;
+
     // Contributed capital = cash equity from investors + seller's rolled equity (non-cash)
     const sellerRollover = closeTerms ? closeTerms.purchasePrice * (closeTerms.sellerRolloverPct || 0) : 0;
     const contributedCapital = closeTerms ? closeTerms.equityContributed + sellerRollover : 0;
     const retainedEarnings = cumulativeNetIncome;
 
     const totalAssets = cash + accountsReceivable + prepaidExpenses + goodwill + fixedAssetsNet;
-    const totalLiabilities = accountsPayable + accruedExpenses + currentPortionLtd + longTermDebt;
-    const totalEquity = contributedCapital + retainedEarnings;
+    // Earnout: if equity instrument, classify under equity; otherwise under liabilities
+    const liabEarnout = earnoutSched.isEquityInstrument ? 0 : earnoutLiability;
+    const equityEarnout = earnoutSched.isEquityInstrument ? earnoutLiability : 0;
+    const totalLiabilities = accountsPayable + accruedExpenses + currentPortionLtd + longTermDebt + liabEarnout;
+    const totalEquity = contributedCapital + retainedEarnings + equityEarnout;
     const isBalanced = Math.abs(totalAssets - (totalLiabilities + totalEquity)) < 0.01;
 
     grid.push({
@@ -544,7 +635,7 @@ function buildEntityBS(params) {
       cash, accountsReceivable, prepaidExpenses, otherCurrentAssets: 0,
       goodwill, otherIntangibles: 0, fixedAssetsNet, otherLtAssets: 0, totalAssets,
       accountsPayable, accruedExpenses, currentPortionLtd, otherCurrentLiabilities: 0,
-      longTermDebt, otherLtLiabilities: 0, totalLiabilities,
+      longTermDebt, otherLtLiabilities: 0, earnoutLiability, totalLiabilities,
       contributedCapital, retainedEarnings, totalEquity,
       isBalanced
     });
@@ -559,7 +650,7 @@ function buildConsolidatedBS(entityBSResults, periods) {
     'cash', 'accountsReceivable', 'prepaidExpenses', 'otherCurrentAssets',
     'goodwill', 'otherIntangibles', 'fixedAssetsNet', 'otherLtAssets', 'totalAssets',
     'accountsPayable', 'accruedExpenses', 'currentPortionLtd', 'otherCurrentLiabilities',
-    'longTermDebt', 'otherLtLiabilities', 'totalLiabilities',
+    'longTermDebt', 'otherLtLiabilities', 'earnoutLiability', 'totalLiabilities',
     'contributedCapital', 'retainedEarnings', 'totalEquity'
   ];
 
@@ -589,7 +680,7 @@ function buildConsolidatedCF(entityCFResults, periods) {
     'cashFromOperations',
     'capex', 'acquisitions', 'cashFromInvesting',
     'debtProceeds', 'debtRepayment', 'cashInterest', 'equityContributions',
-    'cashFromFinancing',
+    'earnoutPayment', 'cashFromFinancing',
     'netChange', 'beginningCash', 'endingCash'
   ];
 
@@ -839,18 +930,37 @@ function calculateModel(input) {
           };
         }
 
+        // Earnout schedule
+        let earnoutTerms = null;
+        if (scenarioDealTerms && scenarioDealTerms.entities && scenarioDealTerms.entities[entity.id]) {
+          const et = scenarioDealTerms.entities[entity.id];
+          if (et.earnoutAmount) {
+            earnoutTerms = {
+              earnoutAmount: et.earnoutAmount,
+              earnoutPctOfProfit: et.earnoutPctOfProfit,
+              earnoutThreshold: et.earnoutThreshold,
+              earnoutCap: et.earnoutCap,
+              earnoutPeriodMonths: et.earnoutPeriodMonths,
+              earnoutIsEquityInstrument: et.earnoutIsEquityInstrument
+            };
+          }
+        }
+        const earnoutResult = buildEarnoutSchedule({
+          earnoutTerms, entityPL: plGrid, periods, closePeriodIndex
+        });
+
         // Cash flow
         const cfGrid = buildEntityCF({
           entityPL: plGrid, wcGrid, capexGrid,
           debtSchedules: entityDebtSchedules, periods,
-          closePeriodIndex, closeTerms
+          closePeriodIndex, closeTerms, earnoutSchedule: earnoutResult
         });
 
         // Balance sheet
         const bsGrid = buildEntityBS({
           entityPL: plGrid, wcGrid, capexGrid,
           debtSchedules: entityDebtSchedules, cfGrid,
-          periods, closePeriodIndex, closeTerms
+          periods, closePeriodIndex, closeTerms, earnoutSchedule: earnoutResult
         });
 
         // Validation
@@ -1650,6 +1760,7 @@ module.exports = {
   projectLineItem,
   projectEntity,
   buildDebtSchedule,
+  buildEarnoutSchedule,
   deriveWorkingCapital,
   deriveCapex,
   buildEntityPL,
