@@ -1,56 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const { authenticate, requireRole, requireDealAccess } = require('../middleware/auth');
 
 // All routes require authentication
 router.use(authenticate);
 
-// Configure multer for file uploads
-const uploadDir = process.env.UPLOAD_DIR || './uploads';
+// Multer: memory storage (buffer) — files go straight to Supabase Storage, never to disk
 const maxFileSize = parseInt(process.env.MAX_FILE_SIZE) || 50 * 1024 * 1024; // 50MB default
 
-const storage = multer.diskStorage({
-  destination: async (req, file, cb) => {
-    const dealDir = path.join(uploadDir, req.params.dealId);
-    try {
-      await fs.mkdir(dealDir, { recursive: true });
-      cb(null, dealDir);
-    } catch (error) {
-      cb(error);
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `${uuidv4()}-${file.originalname}`;
-    cb(null, uniqueName);
-  }
-});
+const STORAGE_BUCKET = 'deal-documents';
+
+const allowedMimes = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'text/plain',
+  'text/csv',
+  'application/zip',
+  'application/x-zip-compressed'
+];
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: maxFileSize },
   fileFilter: (req, file, cb) => {
-    // Allow common document types
-    const allowedMimes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'application/vnd.ms-excel',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      'image/jpeg',
-      'image/png',
-      'image/gif',
-      'text/plain',
-      'text/csv',
-      'application/zip',
-      'application/x-zip-compressed'
-    ];
-
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -99,7 +81,7 @@ router.get('/:dealId', requireDealAccess, async (req, res) => {
 
 /**
  * POST /api/documents/:dealId/upload
- * Upload a document
+ * Upload a document to Supabase Storage
  */
 router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (req, res) => {
   try {
@@ -110,13 +92,29 @@ router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Create document record
+    // Build storage path: {dealId}/{uuid}-{originalname}
+    const storagePath = `${dealId}/${uuidv4()}-${req.file.originalname}`;
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await req.supabase.storage
+      .from(STORAGE_BUCKET)
+      .upload(storagePath, req.file.buffer, {
+        contentType: req.file.mimetype,
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Supabase Storage upload error:', uploadError);
+      throw new Error(`Storage upload failed: ${uploadError.message}`);
+    }
+
+    // Create document record with storage path
     const { data: document, error } = await req.supabase
       .from('documents')
       .insert({
         deal_id: dealId,
         file_name: req.file.originalname,
-        file_path: req.file.path,
+        file_path: storagePath,
         file_size: req.file.size,
         mime_type: req.file.mimetype,
         category,
@@ -129,7 +127,11 @@ router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Clean up storage on DB insert failure
+      await req.supabase.storage.from(STORAGE_BUCKET).remove([storagePath]);
+      throw error;
+    }
 
     // If linked to a checklist item, update its status
     if (checklist_item_id) {
@@ -140,23 +142,19 @@ router.post('/:dealId/upload', requireDealAccess, upload.single('file'), async (
           received_at: new Date().toISOString()
         })
         .eq('id', checklist_item_id)
-        .eq('status', 'requested'); // Only update if currently 'requested'
+        .eq('status', 'requested');
     }
 
     res.status(201).json(document);
   } catch (error) {
     console.error('Error uploading document:', error);
-    // Clean up uploaded file on error
-    if (req.file?.path) {
-      await fs.unlink(req.file.path).catch(() => {});
-    }
     res.status(500).json({ error: 'Failed to upload document' });
   }
 });
 
 /**
  * GET /api/documents/:dealId/:documentId/download
- * Download a document
+ * Download a document from Supabase Storage
  */
 router.get('/:dealId/:documentId/download', requireDealAccess, async (req, res) => {
   try {
@@ -178,14 +176,23 @@ router.get('/:dealId/:documentId/download', requireDealAccess, async (req, res) 
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Check if file exists
-    try {
-      await fs.access(document.file_path);
-    } catch {
-      return res.status(404).json({ error: 'File not found on server' });
+    // Download from Supabase Storage
+    const { data: fileData, error: downloadError } = await req.supabase.storage
+      .from(STORAGE_BUCKET)
+      .download(document.file_path);
+
+    if (downloadError) {
+      console.error('Storage download error:', downloadError);
+      return res.status(404).json({ error: 'File not found in storage' });
     }
 
-    res.download(document.file_path, document.file_name);
+    // Convert blob to buffer and send
+    const buffer = Buffer.from(await fileData.arrayBuffer());
+
+    res.setHeader('Content-Type', document.mime_type);
+    res.setHeader('Content-Disposition', `attachment; filename="${document.file_name}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
   } catch (error) {
     console.error('Error downloading document:', error);
     res.status(500).json({ error: 'Failed to download document' });
@@ -233,7 +240,7 @@ router.delete('/:dealId/:documentId', requireRole(['admin', 'team_member']), asy
   try {
     const { dealId, documentId } = req.params;
 
-    // Get document to find file path
+    // Get document to find storage path
     const { data: document, error: fetchError } = await req.supabase
       .from('documents')
       .select('file_path')
@@ -253,11 +260,13 @@ router.delete('/:dealId/:documentId', requireRole(['admin', 'team_member']), asy
 
     if (deleteError) throw deleteError;
 
-    // Delete file from disk
-    try {
-      await fs.unlink(document.file_path);
-    } catch (e) {
-      console.warn('Could not delete file:', e.message);
+    // Delete from Supabase Storage
+    const { error: storageError } = await req.supabase.storage
+      .from(STORAGE_BUCKET)
+      .remove([document.file_path]);
+
+    if (storageError) {
+      console.warn('Could not delete file from storage:', storageError.message);
     }
 
     res.json({ success: true });
